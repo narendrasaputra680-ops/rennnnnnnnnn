@@ -1,0 +1,3016 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="color-scheme" content="light">
+<meta name="theme-color" content="#2f86dc">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Ren Weather">
+<title>Ren Weather</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{width:100%;height:100%;overflow:hidden;font-family:Arial,sans-serif;background:#eafaff;color:#fff;touch-action:manipulation;-webkit-tap-highlight-color:transparent}
+button,input,textarea,select{font:inherit}
+.page{position:fixed;inset:0;width:100%;height:100%;visibility:hidden;transform:translateY(100%);transition:transform .85s cubic-bezier(.76,0,.24,1)}
+.page.active{visibility:visible;transform:none}
+.page.exit{transform:translateY(-100%)}
+.page.fade{transform:none;opacity:0;transition:opacity .5s}
+.page.fade.active{opacity:1}
+.page.fadeout{transform:none;opacity:0;transition:opacity .5s}
+
+/* HOME */
+body{--sk1:#67cef8;--sk2:#eafaff;--sun:#ffe47d}
+body.dawn,body.dusk{--sun:#ffb26b}
+body.night{--sun:#f6f1d5}
+#home,#login,#city{background:linear-gradient(155deg,var(--sk1),var(--sk2))!important}
+#home{z-index:10}
+.sunball-home{position:absolute;right:5%;top:7%;width:90px;height:90px;border-radius:50%;background:var(--sun);box-shadow:0 0 45px var(--sun);transition:opacity 1s,transform 1s}
+#home.rainy .sunball-home{opacity:0;transform:scale(.4)}
+.cloud{position:absolute;left:50%;top:40%;width:300px;height:180px;transform:translate(-50%,-50%);background:#fff;border-radius:90px;box-shadow:0 18px 40px #287da044;z-index:3;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;opacity:0;pointer-events:none}
+.cloud:before,.cloud:after{content:"";position:absolute;background:#fff;border-radius:50%}
+.cloud:before{width:130px;height:130px;left:30px;top:-58px}
+.cloud:after{width:160px;height:160px;right:22px;top:-74px}
+.cloud>*{position:relative;z-index:5;opacity:0;transition:opacity .7s}
+.cloud.show>*{opacity:1}
+.cloud.ready{pointer-events:auto}
+.ltxt{color:#1f5f86;font-weight:bold;font-size:34px;letter-spacing:1px;user-select:none}
+.lbtn{padding:11px 36px;border:0;border-radius:999px;background:#3eb8eb;color:#fff;font-weight:bold;font-size:18px;cursor:pointer}
+.cloud.ready .lbtn{animation:pulse 2s ease-in-out infinite}
+@keyframes pulse{50%{transform:scale(1.07)}}
+.rain-dark{position:absolute;inset:0;z-index:1;pointer-events:none;background:linear-gradient(180deg,#2c4a6b,#5d7f9c);opacity:0;transition:opacity 1s}
+.rain-dark.on{opacity:.62}
+#city .rain-dark.on{opacity:.3}
+.rain-cv{position:absolute;inset:0;z-index:2;width:100%;height:100%;pointer-events:none}
+#home .scene{z-index:2}
+
+/* LOGIN / CITY */
+#login,#city{z-index:9;display:flex;align-items:center;justify-content:center;padding:20px}
+#city{z-index:8}
+.glass{background:#ffffff2e;border:1px solid #ffffff55;box-shadow:0 10px 30px #00326418,inset 0 1px #ffffff55}
+.box.glass{background:#ffffff8c}
+.box{position:relative;z-index:1;width:min(430px,100%);padding:28px 23px;border-radius:30px;opacity:0;transform:translateY(35px) scale(.95);transition:opacity .7s,transform .7s}
+.page.active .box{opacity:1;transform:none}
+.logo,.city-icon{text-align:center;font-size:58px}
+h1,.city-title{text-align:center;color:#245e77}
+.city-title{font-size:28px;font-weight:bold}
+.sub{text-align:center;color:#527c8d;margin:8px 0 23px}
+label{display:block;color:#2c6377;font-weight:bold;margin:14px 0 7px}
+input{width:100%;padding:15px;border:1px solid #ffffffcc;border-radius:16px;background:#fff;color:#24566a;outline:none}
+.gender{display:flex;gap:9px}
+.gender button,.chip{flex:1;padding:13px;border:1px solid #ffffffaa;border-radius:16px;background:#ffffff88;color:#315e70;font-weight:bold;cursor:pointer;transition:transform .15s,background .2s}
+.gender button:active,.chip:active{transform:scale(.95)}
+.gender button.selected{background:#3eb8eb;color:#fff}
+.main,.search{border:0;background:#3eb8eb;color:#fff;font-weight:bold;cursor:pointer}
+.main{width:100%;padding:16px;border-radius:17px;margin-top:20px}
+.err{min-height:20px;text-align:center;color:#d45e5e;margin-top:9px}
+.city-search{display:flex;gap:8px}
+.city-search input{flex:1}
+.search{width:58px;border-radius:16px;font-size:20px}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}
+.chip{flex:none}
+.sugg{display:none;margin-top:10px;border-radius:18px;overflow:hidden;background:#ffffffe6;box-shadow:0 8px 24px #00326422}
+.sugg.on{display:block}
+.sg{display:flex;flex-direction:column;align-items:flex-start;width:100%;padding:11px 14px;border:0;border-bottom:1px solid #2f86dc18;background:transparent;color:#245e77;text-align:left;cursor:pointer;animation:sgIn .3s both;animation-delay:var(--d,0ms)}
+.sg:last-child{border-bottom:0}
+.sg span{font-size:12px;opacity:.65}
+.sg:active{background:#3eb8eb22}
+@keyframes sgIn{from{opacity:0;transform:translateY(-8px)}}
+.rcap{width:100%;font-size:12px;color:#527c8d;margin-top:2px}
+
+/* KOTAK: dari matahari (login) dan dari tetesan (kota) */
+#login .box,#city .box{opacity:1;transform:none;transition:none}
+#login .box>*,#city .box>*{opacity:0}
+#city .box{z-index:3}
+.box.sunmode{background:var(--sun)!important;border-radius:50%;border-color:transparent;box-shadow:0 0 45px var(--sun)}
+.box.dropmode{background:#cfeeff!important;border-radius:50% 50% 50% 50%/62% 62% 38% 38%;border-color:transparent;box-shadow:0 0 18px #8fd6ff}
+.box.rev>*{animation:kid .45s cubic-bezier(.2,.8,.2,1) both;animation-delay:calc(var(--i,0)*80ms)}
+@keyframes kid{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+
+/* LATAR: gunung, awan, burung */
+.scene{position:absolute;inset:0;overflow:hidden;pointer-events:none;z-index:0}
+.mt{position:absolute;left:0;bottom:0;width:200%;will-change:transform;animation:mtMove linear infinite}
+@keyframes mtMove{to{transform:translateX(-50%)}}
+.sc{position:absolute;left:0;width:130px;height:46px;border-radius:40px;background:var(--cl,#fff);opacity:.9;scale:var(--s,1);will-change:transform;animation:drift linear infinite}
+.sc:before,.sc:after{content:"";position:absolute;background:var(--cl,#fff);border-radius:50%}
+.sc:before{width:58px;height:58px;left:20px;top:-28px}
+.sc:after{width:72px;height:72px;right:14px;top:-36px}
+@keyframes drift{from{transform:translateX(-35vw)}to{transform:translateX(125vw)}}
+.bird{position:absolute;left:0;will-change:transform;animation:fly linear infinite}
+.bird svg{display:block}
+.bird path{transform-box:fill-box;transform-origin:50% 100%;animation:flap .5s ease-in-out infinite alternate}
+@keyframes flap{to{transform:scaleY(.3)}}
+@keyframes fly{0%{transform:translate(-12vw,0)}50%{transform:translate(52vw,-22px)}100%{transform:translate(112vw,8px)}}
+@media(prefers-reduced-motion:reduce){.scene *,#home .cloud,.lbtn{animation:none!important}}
+
+/* WEATHER */
+#weather{z-index:7;background:#14246b!important;overflow-y:auto;overflow-x:hidden;overscroll-behavior-y:contain;-webkit-overflow-scrolling:touch}
+.wrap{position:relative;z-index:1;max-width:680px;margin:auto;padding:0 16px 40px}
+.header{position:sticky;top:0;z-index:30;margin:0 -16px;padding:17px 20px;background:#0f2370e6;border-bottom:1px solid #ffffff20}
+.headrow{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.cityname{font-size:24px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.actions{display:flex;gap:3px}
+.actions button{border:0;background:transparent;color:#fff;font-size:21px;padding:6px 5px;cursor:pointer;transition:transform .15s}
+.actions button:active{transform:scale(.8)}
+.current{margin-top:20px;padding:27px;border-radius:29px;text-align:center}
+.icon{font-size:80px;display:inline-block;animation:floaty 4s ease-in-out infinite}
+@keyframes floaty{50%{transform:translateY(-6px)}}
+.temp{font-size:62px;font-weight:bold;line-height:1}
+.desc{font-size:19px;margin-top:8px}
+.muted{opacity:.68}
+.title{font-size:20px;font-weight:bold;margin:24px 4px 11px}
+.hours{display:flex;gap:10px}
+.hours::-webkit-scrollbar{display:none}
+.hour{min-width:84px;padding:13px 8px;border-radius:20px;text-align:center}
+.hour .i{font-size:31px;margin:8px 0}
+.hour .t{font-weight:bold;font-size:18px}
+.rain{font-size:12px;color:#aee7ff;margin-top:5px}
+.forecast,.suncard,.air,.life{padding:18px;border-radius:27px}
+.frow{display:grid;grid-template-columns:1.2fr .6fr .8fr;align-items:center;padding:13px 4px;border-bottom:1px solid #ffffff14}
+.frow:last-child{border:0}
+.fi{text-align:center;font-size:29px}
+.ft{text-align:right}
+.grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+.detail{min-height:120px;padding:17px;border-radius:23px}
+.di{font-size:29px}
+.dv{font-size:23px;font-weight:bold;margin-top:5px}
+.ds{font-size:12px;opacity:.65}
+.sunrow{display:flex;justify-content:space-between}
+.aqi{font-size:34px;font-weight:bold;margin:3px 0}
+.aqibar{height:10px;border-radius:10px;margin:17px 0;background:linear-gradient(90deg,#2ad66f,#ffd12e,#ff783e,#ff3f70,#b33cff)}
+.poll{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}
+.poll div{padding:11px;border-radius:14px;background:#ffffff12}
+.lifegrid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px 7px}
+.life{text-align:center}
+.li{font-size:29px}
+.lt{font-size:12px;opacity:.72;margin-top:6px}
+.bottom{width:100%;margin-top:14px;padding:15px;border:0;border-radius:17px;background:#ffffff18;color:#fff;font-weight:bold;cursor:pointer;transition:transform .15s,background .2s}
+.bottom:active{transform:scale(.97);background:#ffffff2a}
+.loading{text-align:center;padding:70px 20px}
+.spin{display:inline-block;animation:spin 1s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+@media(max-width:390px){.temp{font-size:54px}.dv{font-size:20px}}
+
+/* LANGIT SESUAI JAM */
+body.night .box{background:#ffffffe0}
+.star{position:absolute;width:2px;height:2px;border-radius:50%;background:#fff;animation:tw 3s ease-in-out infinite}
+@keyframes tw{50%{opacity:.15}}
+.moon{position:absolute;right:9%;top:9%;width:64px;height:64px;border-radius:50%;background:#f6f1d5;box-shadow:0 0 40px #f6f1d5aa}
+
+/* LATAR CUACA HIDUP */
+#wxbg{position:fixed;inset:0;z-index:0;pointer-events:none;background:linear-gradient(180deg,#2f86dc,#8fd3f7)}
+#wxcv{display:block;width:100%;height:100%}
+.greet{margin-top:18px;padding:0 4px;text-shadow:0 1px 8px #0004}
+.gh{font-size:22px;font-weight:bold}
+.gt{opacity:.85;margin-top:4px;font-size:14px}
+.greet+.current{margin-top:14px}
+
+/* FITUR TAMBAHAN */
+.hwrap{overflow-x:auto;overscroll-behavior-x:contain;-webkit-overflow-scrolling:touch}
+.hwrap::-webkit-scrollbar{display:none}
+.hin{padding-bottom:4px}
+.hch{display:block;overflow:visible;margin-bottom:6px}
+.cap{font-size:12px;opacity:.7;margin:12px 0 2px 4px}
+.favs{display:flex;gap:8px;overflow-x:auto;margin-top:14px;padding-bottom:2px}
+.favs::-webkit-scrollbar{display:none}
+.fav{flex:none;padding:8px 14px;border-radius:999px;border:1px solid #ffffff55;background:#ffffff22;color:#fff;font-weight:bold;cursor:pointer;transition:transform .15s}
+.fav:active{transform:scale(.93)}
+.fav.on{background:#fff;color:#245e77}
+.alert{margin-top:14px;padding:13px 16px;border-radius:18px;font-size:14px;line-height:1.4;border:1px solid #ffffff44;animation:annIn .5s cubic-bezier(.2,1.2,.3,1) both}
+.alert.warn{background:#ffb02e38;border-color:#ffd27a88}
+.alert.danger{background:#ff4d6d45;border-color:#ff8aa099}
+.alert.ok{background:#ffffff1c}
+.alert.off{background:#00000026}
+.sumline{margin-top:12px;font-size:14px;line-height:1.45;opacity:.92}
+.cmp{font-size:13px;opacity:.75;margin-top:4px}
+.arc{display:block;width:100%;height:auto}
+.moonrow{display:flex;align-items:center;gap:14px;margin-top:16px;padding-top:14px;border-top:1px solid #ffffff22}
+.moonrow .mi{font-size:38px}
+.outfit div{padding:7px 0;font-size:15px}
+.set{padding:18px;border-radius:27px}
+.srow{display:flex;align-items:center;justify-content:space-between;padding:8px 0}
+.seg{display:flex;background:#ffffff1f;border-radius:12px;padding:3px}
+.seg button{border:0;background:transparent;color:#fff;padding:7px 14px;border-radius:9px;font-weight:bold;cursor:pointer;transition:background .25s,color .25s}
+.seg button.on{background:#fff;color:#245e77}
+#weather.dark .glass{background:#0a0f2a52;border-color:#ffffff30}
+#ptr{position:fixed;left:50%;top:78px;z-index:40;width:40px;height:40px;border-radius:50%;background:#ffffffee;color:#245e77;display:flex;align-items:center;justify-content:center;font-size:22px;opacity:0;transform:translate(-50%,-60px);transition:opacity .25s,transform .25s;pointer-events:none}
+.actions button.busy{animation:spin 1s linear infinite}
+@keyframes inL{from{opacity:0;transform:translateX(36px)}}
+@keyframes inR{from{opacity:0;transform:translateX(-36px)}}
+#content.sl{animation:inL .35s ease-out}
+#content.sr{animation:inR .35s ease-out}
+
+/* FITUR PENGGUNA BARU */
+.ann{margin-top:14px;padding:13px 16px;border-radius:18px;font-size:14px;line-height:1.45;display:flex;gap:10px;align-items:flex-start;background:linear-gradient(135deg,#7a5cff66,#3eb8eb55);border:1px solid #ffffff55;animation:annIn .5s cubic-bezier(.2,1.2,.3,1) both}
+.ann b{display:block;font-size:12px;opacity:.8;margin-bottom:2px}
+.ann button{margin-left:auto;border:0;background:transparent;color:#fff;font-size:18px;cursor:pointer;padding:0 2px}
+@keyframes annIn{from{opacity:0;transform:translateY(-12px) scale(.96)}}
+.best{padding:18px;border-radius:27px;text-align:center}
+.bt{font-size:30px;font-weight:bold;margin:8px 0}
+.rb{display:grid;grid-template-columns:54px 36px 1fr 36px;align-items:center;gap:8px;padding:7px 0;font-size:13px}
+.rb b{text-align:right}
+.rtrack{position:relative;height:8px;border-radius:8px;background:#ffffff22}
+.rfill{position:absolute;top:0;bottom:0;border-radius:8px;background:linear-gradient(90deg,#8fd3f7,#ffd36b,#ff7a5c);transform-origin:left;animation:gx .9s cubic-bezier(.2,.8,.2,1) both;animation-delay:calc(var(--k,0)*70ms)}
+@keyframes gx{from{transform:scaleX(0)}}
+body.nofav #favBtn,body.nofav .favs{display:none!important}
+body.noshare #shareBtn{display:none!important}
+body.nogps #gpsChip{display:none!important}
+body.nonotif #notifRow{display:none!important}
+body.nobest .bestwrap{display:none!important}
+
+/* MODE PEMELIHARAAN */
+#maint{position:fixed;inset:0;z-index:99990;display:none;align-items:center;justify-content:center;padding:28px;text-align:center;background:linear-gradient(160deg,#17233e,#263b60);color:#fff}
+#maint.show{display:flex;animation:fadeIn .5s}
+.mtico{font-size:72px;display:inline-block;animation:wob 2.4s ease-in-out infinite;user-select:none}
+#maint h2{margin:14px 0 8px;font-size:24px}
+#maint p{opacity:.8;line-height:1.5;max-width:320px}
+@keyframes wob{50%{transform:rotate(14deg) scale(1.08)}}
+@keyframes fadeIn{from{opacity:0}}
+
+/* TRANSISI KOTA -> CUACA */
+#tr{position:fixed;inset:0;z-index:60}
+.trsky{position:absolute;inset:0;overflow:hidden}
+.trtxt{position:absolute;left:0;top:0;font-size:24px;color:#fff;white-space:nowrap;transform-origin:0 0;opacity:0;text-shadow:0 2px 14px #0006;will-change:transform}
+.trsky .sunball-home{transition:none}
+
+/* ===== ADMIN ===== */
+#adminOverlay{position:fixed;inset:0;z-index:99999;display:none;align-items:center;justify-content:center;padding:20px;background:rgba(0,0,0,.58);backdrop-filter:blur(18px)}
+#adminOverlay.show{display:flex;animation:fadeIn .3s}
+.admin-box{width:min(500px,100%);max-height:88vh;overflow:auto;padding:24px;border-radius:28px;background:rgba(255,255,255,.16);border:1px solid rgba(255,255,255,.3);box-shadow:0 25px 80px rgba(0,0,0,.35);color:#fff}
+#adminOverlay.show .admin-box{animation:pop .45s cubic-bezier(.2,1.2,.3,1)}
+@keyframes pop{from{opacity:0;transform:translateY(24px) scale(.94)}}
+.admin-box h2{margin-bottom:6px;font-size:25px}.admin-sub{opacity:.7;font-size:13px;margin-bottom:18px}
+.admin-input{width:100%;padding:14px 16px;margin:7px 0;border:1px solid rgba(255,255,255,.25);border-radius:15px;outline:none;background:rgba(255,255,255,.14);color:#fff}
+.admin-input::placeholder{color:rgba(255,255,255,.65)}
+textarea.admin-input{resize:vertical;min-height:70px}
+.admin-btn{width:100%;padding:14px;margin-top:10px;border:0;border-radius:16px;background:#fff;color:#287dcc;font-weight:bold;cursor:pointer;transition:transform .15s,opacity .2s}
+.admin-btn:active{transform:scale(.96);opacity:.85}
+.admin-close{background:rgba(255,255,255,.15);color:#fff}.admin-error{min-height:18px;color:#ffd0d0;font-size:13px;margin-top:8px}
+.admin-user{padding:15px;margin:10px 0;border-radius:18px;background:rgba(255,255,255,.11)}
+.ucard{animation:fadeUp .45s cubic-bezier(.2,.8,.2,1) both;animation-delay:calc(var(--k,0)*40ms)}
+@keyframes fadeUp{from{opacity:0;transform:translateY(14px)}}
+.admin-user-head{font-size:16px;font-weight:bold}.admin-user-meta{font-size:12px;opacity:.7;margin-top:3px}
+.admin-activity{padding:10px;margin-top:8px;border-radius:13px;background:rgba(255,255,255,.08);font-size:13px;animation:fadeUp .35s both}
+.admin-danger{background:#ff5d5d;color:#fff}
+.admin-tools{display:grid;grid-template-columns:1fr 1fr;gap:7px}.admin-tools .admin-btn{margin-top:0;padding:12px 7px;font-size:12px}
+.admin-label{color:#fff!important;font-size:12px!important;margin:12px 0 3px!important;display:block}.admin-actions{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:8px}.admin-actions .admin-btn{font-size:11px;padding:10px 5px;margin:0}.admin-input option{color:#123}.admin-note{font-size:11px;opacity:.75;margin-top:6px;line-height:1.4}.admin-filter-panel{margin:12px 0}.admin-filter-panel .admin-input{margin-top:8px}.admin-filter-panel .admin-tools{margin-top:8px}
+.admin-checks{display:grid;grid-template-columns:1fr 1fr;gap:2px 10px;margin:4px 0}
+.admin-check{display:flex!important;align-items:center;gap:8px;color:#fff!important;font-size:13px!important;margin:6px 0!important;font-weight:normal!important}
+.admin-box input[type=checkbox]{width:20px;height:20px;padding:0;margin:0;flex:none;accent-color:#3eb8eb}
+.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:7px;margin-top:10px}
+.kpi{padding:10px 4px;border-radius:14px;background:rgba(255,255,255,.1);text-align:center}
+.kpi b{display:block;font-size:20px}.kpi span{font-size:10px;opacity:.7}
+.bars{display:flex;align-items:flex-end;gap:7px;height:96px;margin-top:6px}
+.bcol{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;font-size:10px}
+.bcol i{display:block;width:100%;min-height:3px;border-radius:7px 7px 3px 3px;background:linear-gradient(180deg,#8fd3f7,#3eb8eb);transform-origin:bottom;animation:gy .8s cubic-bezier(.2,.8,.2,1) both;animation-delay:calc(var(--k,0)*70ms)}
+.bcol span{opacity:.85;margin-bottom:2px}.bcol small{opacity:.6;margin-top:3px}
+@keyframes gy{from{transform:scaleY(0)}}
+.hrow{display:grid;grid-template-columns:90px 1fr 26px;align-items:center;gap:8px;font-size:12px;margin-top:6px}
+.hrow span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.hb{height:8px;border-radius:8px;background:rgba(255,255,255,.12);overflow:hidden}
+.hb i{display:block;height:100%;width:var(--w);border-radius:8px;background:linear-gradient(90deg,#8fd3f7,#ffd36b);transform-origin:left;animation:gx .9s cubic-bezier(.2,.8,.2,1) both;animation-delay:calc(var(--k,0)*70ms)}
+.dot{display:inline-block;width:9px;height:9px;border-radius:50%;background:#2ad66f;margin-left:6px;box-shadow:0 0 8px #2ad66f;animation:blink 1.6s ease-in-out infinite}
+@keyframes blink{50%{opacity:.35}}
+.tag{display:inline-block;margin-left:6px;padding:2px 8px;border-radius:999px;background:#ff5d5d;font-size:10px}
+.unote{margin-top:8px;padding:8px 10px;border-radius:12px;background:rgba(255,211,107,.18);font-size:12px}
+
+/* Ren Weather feature pack */
+.feature-card{padding:16px;border-radius:24px;margin-top:10px}
+.calendar-head{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:12px}
+.calendar-head button{border:0;border-radius:10px;padding:8px 12px;background:#ffffff22;color:#fff}
+.calgrid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px;text-align:center}
+.calgrid span,.calgrid button{padding:8px 0;border-radius:10px;font-size:12px}
+.calgrid .weekday{opacity:.6;font-size:10px}
+.calgrid button{border:0;background:#ffffff12;color:#fff;min-height:42px}
+.calgrid button.today{background:#fff;color:#245e77;font-weight:bold}
+.calgrid button.rain-day{box-shadow:inset 0 -3px #55c8ff}
+.calgrid button:disabled{opacity:.25}
+.feature-line{display:flex;justify-content:space-between;gap:10px;padding:9px 0;border-bottom:1px solid #ffffff18;font-size:13px}
+.feature-line:last-child{border:0}
+.theme-options{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.theme-options button{padding:10px 2px;border-radius:12px;border:1px solid #ffffff55;background:#ffffff16;color:#fff;font-size:12px}
+.theme-options button.on{background:#fff;color:#245e77}
+.badge-list{display:flex;gap:7px;flex-wrap:wrap;margin-top:8px}
+.badge-pill{border:1px solid #ffffff44;background:#ffffff12;border-radius:999px;padding:7px 10px;font-size:12px}
+.badge-pill.unlocked{background:#ffd36b2b;border-color:#ffd36b88}
+.guest-note{font-size:12px;opacity:.75;margin-top:8px}
+
+.theme-amoled{background:#000!important}.theme-amoled .glass{background:#080808e8!important;border-color:#333!important}.theme-neon .glass{border-color:#68f7ff!important;box-shadow:0 0 14px #26d9ff33}.theme-minimal .glass{backdrop-filter:none!important;box-shadow:none!important;background:#26364ccc!important}
+
+/* ===== WATER GLASS ===== */
+.glass{position:relative;overflow:hidden;isolation:isolate;
+background:linear-gradient(145deg,#ffffff3d 0%,#9be3ff1f 45%,#4fb8ff2e 100%);
+border:1px solid #ffffff6e;
+-webkit-backdrop-filter:blur(14px) saturate(1.6) brightness(1.06);backdrop-filter:blur(14px) saturate(1.6) brightness(1.06);
+box-shadow:0 12px 32px #00428a30,inset 0 1.5px 1px #ffffffcc,inset 0 -10px 22px #5cc8ff33,inset 0 0 28px #bfeaff2b}
+.box.glass{background:linear-gradient(145deg,#ffffffb0,#d4f2ffa0 55%,#a8e0ff99)}
+.glass::before{content:"";position:absolute;left:-8%;right:-8%;top:0;height:46%;z-index:-1;pointer-events:none;border-radius:0 0 50% 50%/0 0 100% 100%;background:linear-gradient(180deg,#ffffff66,#ffffff00)}
+.glass::after{content:"";position:absolute;left:-60%;top:-20%;width:50%;height:140%;z-index:-1;pointer-events:none;background:linear-gradient(100deg,transparent,#ffffff40,transparent);transform:skewX(-18deg);animation:wgShine 7s ease-in-out infinite}
+@keyframes wgShine{0%,55%{left:-60%}100%{left:130%}}
+.current.glass,.best.glass,.suncard.glass,.forecast.glass,.air.glass,.life.glass,.set.glass,.feature-card.glass{animation:wgBob 7s ease-in-out infinite}
+@keyframes wgBob{50%{border-radius:30px 26px 32px 24px/26px 32px 24px 30px}}
+.hour.glass,.detail.glass{border-radius:22px 22px 26px 26px/20px 20px 30px 30px}
+#weather.dark .glass{background:linear-gradient(145deg,#8fd0ff26,#0a1a4a52 55%,#1b64c036);border-color:#ffffff40;box-shadow:0 12px 32px #00000040,inset 0 1.5px 1px #ffffff77,inset 0 -10px 22px #3aa0ff2b}
+#weather.dark .glass::before{background:linear-gradient(180deg,#ffffff2e,#ffffff00)}
+
+/* teks suhu & angka: water glass */
+.temp,.dv,.hour .t,.ft,.aqi,.bt,.gh,.cityname,.ltxt,.rb b,.dv{
+background:linear-gradient(180deg,#ffffff 0%,#d9f4ff 38%,#7fd0ff 62%,#e8f8ff 100%);
+-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;color:transparent;
+filter:drop-shadow(0 1px 0 #ffffffaa) drop-shadow(0 3px 6px #0050a066)}
+.ltxt{background:linear-gradient(180deg,#2a8fd0,#7fd0ff 55%,#1f5f86);-webkit-background-clip:text;background-clip:text;filter:drop-shadow(0 1px 0 #fff)}
+.temp{position:relative;animation:wgWave 5s ease-in-out infinite;background-size:100% 200%}
+@keyframes wgWave{0%,100%{background-position:0 0}50%{background-position:0 100%}}
+.icon,.hour .i,.fi,.di,.li{filter:drop-shadow(0 4px 8px #0066c055) drop-shadow(0 -1px 1px #ffffff99)}
+.temp,.dv,.hour .t,.ft{display:inline-block}
+.hour .t,.ft{display:block}
+.desc,.muted,.rain{text-shadow:0 1px 6px #0060b055}
+.actions button,.fav,.seg,.bottom,.gender button,.chip,.theme-options button,.badge-pill{-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);box-shadow:inset 0 1px 1px #ffffff88,inset 0 -4px 8px #5cc8ff22}
+.bottom{background:linear-gradient(160deg,#ffffff30,#4fb8ff22);border:1px solid #ffffff55}
+.aqibar,.rtrack{box-shadow:inset 0 1px 2px #0003,0 1px 0 #ffffff55}
+.rfill{box-shadow:inset 0 1px 1px #fff9}
+.header{-webkit-backdrop-filter:blur(16px) saturate(1.5);backdrop-filter:blur(16px) saturate(1.5);background:linear-gradient(180deg,#0f2370c8,#1b64c080)}
+@media(prefers-reduced-motion:reduce){.glass,.glass::after,.temp{animation:none!important}}
+body.nofx .glass::after{display:none}
+.theme-amoled .glass::before,.theme-amoled .glass::after{display:none}
+.theme-minimal .glass::before,.theme-minimal .glass::after{display:none}
+
+
+/* ===== WATER GLASS v3: lebih bening ===== */
+.glass{
+background:linear-gradient(135deg,#ffffff1f 0%,#ffffff08 42%,#a5e3ff14 100%);
+-webkit-backdrop-filter:blur(6px) saturate(1.9) contrast(1.04) brightness(1.08);backdrop-filter:blur(6px) saturate(1.9) contrast(1.04) brightness(1.08);
+border:1px solid #ffffff5c;
+box-shadow:0 8px 26px #00306e24,inset 0 1px 0 #ffffffd9,inset 1px 0 0 #ffffff66,inset -1px 0 0 #ffffff33,inset 0 -1px 0 #ffffff40,inset 0 0 22px #ffffff12,inset 0 -16px 26px #6fd0ff1c}
+.glass::before{left:0;right:0;top:0;height:100%;border-radius:inherit;
+background:radial-gradient(130% 55% at 14% -8%,#ffffff70,#ffffff00 62%),radial-gradient(90% 42% at 88% 114%,#a8e6ff48,#a8e6ff00 70%)}
+.glass::after{background:linear-gradient(100deg,transparent,#ffffff26,transparent)}
+.box.glass{background:linear-gradient(145deg,#ffffff86,#e4f6ff5e 55%,#bfe9ff54)}
+body.night .box.glass{background:linear-gradient(145deg,#ffffffa8,#dff3ff80 60%,#bfe9ff66)}
+#weather.dark .glass{background:linear-gradient(145deg,#bfe6ff1e,#0a1a4a30 60%,#2a80e01c);border-color:#ffffff48;box-shadow:0 8px 26px #0000003a,inset 0 1px 0 #ffffff88,inset 0 -16px 26px #3aa0ff22}
+.current.glass,.best.glass,.suncard.glass,.forecast.glass,.air.glass,.life.glass,.set.glass,.feature-card.glass{animation:none}
+.header{background:linear-gradient(180deg,#0f237094,#1b64c04d)}
+.wg-host{position:relative}
+.wg-pre{opacity:0!important}
+#wgfx{position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:55}
+</style>
+</head>
+<body>
+
+<!-- ===== ADMIN ===== -->
+<div id="adminOverlay">
+  <div class="admin-box">
+    <div id="adminLoginBox">
+      <h2>🔐 Admin Ren Weather</h2>
+      <div class="admin-sub">Area administrator</div>
+      <input id="adminUser" class="admin-input" type="email" placeholder="Email admin" autocomplete="off">
+      <input id="adminPass" class="admin-input" type="password" placeholder="Password">
+      <div id="adminError" class="admin-error"></div>
+      <button class="admin-btn" onclick="adminLogin()">Masuk sebagai Admin</button>
+      <button class="admin-btn admin-close" onclick="closeAdmin()">Tutup</button>
+    </div>
+    <div id="adminPanel" style="display:none">
+      <h2>👑 Admin Panel</h2>
+      <div class="admin-sub">👑 Mode Admin Super · kontrol pengguna dan aplikasi</div>
+      <div id="adminStats" class="admin-user">Memuat statistik...</div>
+      <div class="admin-tools">
+        <button class="admin-btn" onclick="renderAdminLogs()">🔄 Refresh data</button>
+        <button class="admin-btn" onclick="exportAdminData('json')">📦 Ekspor JSON</button>
+        <button class="admin-btn" onclick="exportAdminData('csv')">📄 Ekspor CSV</button><button class="admin-btn" onclick="exportWeeklyReport()">📊 Laporan mingguan</button>
+        <button class="admin-btn" onclick="openAdminSettings()">🎛️ Kontrol aplikasi</button>
+        <button class="admin-btn" onclick="pruneAdminLogs()">🧹 Hapus log &gt; 30 hari</button>
+        <button class="admin-btn admin-danger" onclick="clearAdminLogs()">🗑️ Hapus semua aktivitas</button>
+      </div>
+      <div id="adminSettings" class="admin-user" style="display:none">
+        <b>⚙️ Kontrol aplikasi</b>
+        <label class="admin-label" for="adminAppTitle">Nama aplikasi</label><input id="adminAppTitle" class="admin-input" value="Ren Weather" maxlength="50">
+        <label class="admin-label" for="adminTheme">Tema aplikasi</label><select id="adminTheme" class="admin-input"><option value="blue">Biru langit</option><option value="purple">Ungu</option><option value="green">Hijau</option><option value="dark">Gelap</option></select>
+        <label class="admin-label" for="adminAnnounce">📣 Pengumuman untuk semua pengguna</label>
+        <textarea id="adminAnnounce" class="admin-input" maxlength="240" placeholder="Kosongkan untuk menghapus pengumuman"></textarea>
+        <label class="admin-check"><input type="checkbox" id="adminMaint"> 🛠️ Mode pemeliharaan (pengguna tidak bisa masuk)</label>
+        <input id="adminMaintMsg" class="admin-input" maxlength="160" placeholder="Pesan pemeliharaan (opsional)">
+        <div class="admin-label">🎛️ Fitur yang aktif untuk pengguna</div>
+        <div class="admin-checks">
+          <label class="admin-check"><input type="checkbox" id="ftFav" checked> ⭐ Favorit</label>
+          <label class="admin-check"><input type="checkbox" id="ftShare" checked> 📤 Bagikan</label>
+          <label class="admin-check"><input type="checkbox" id="ftGps" checked> 📍 Lokasi GPS</label>
+          <label class="admin-check"><input type="checkbox" id="ftNotif" checked> 🔔 Notifikasi</label>
+          <label class="admin-check"><input type="checkbox" id="ftBest" checked> 🕒 Waktu terbaik</label>
+        </div>
+        <label class="admin-label" for="adminBannedWords">Kata terlarang untuk nama (pisahkan koma)</label><input id="adminBannedWords" class="admin-input" placeholder="misal: admin, kasar, spam"><button class="admin-btn" onclick="saveAdminSettings()">💾 Simpan & terapkan ke semua pengguna</button>
+        <button class="admin-btn admin-close" onclick="document.getElementById('adminSettings').style.display='none'">Tutup pengaturan</button>
+      </div>
+      <div class="admin-user admin-filter-panel">
+        <b>🔎 Cari, filter & urutkan</b>
+        <input id="adminSearch" class="admin-input" type="search" placeholder="Cari nama, ID perangkat, kota..." oninput="filterAdminLogs()">
+        <select id="adminTypeFilter" class="admin-input" onchange="filterAdminLogs()">
+          <option value="all">Semua jenis aktivitas</option>
+          <option value="login">Login</option>
+          <option value="city">Pencarian kota</option>
+          <option value="gps">Lokasi GPS</option>
+          <option value="other">Aktivitas lainnya</option>
+        </select>
+        <select id="adminSort" class="admin-input" onchange="paintAdmin()">
+          <option value="recent">Urutkan: terakhir aktif</option>
+          <option value="active">Urutkan: paling aktif</option>
+          <option value="name">Urutkan: nama A–Z</option>
+        </select>
+        <div class="admin-tools">
+          <button id="adminAutoRefreshBtn" class="admin-btn" onclick="toggleAdminAutoRefresh()">⏱️ Auto-refresh: Mati</button>
+          <button class="admin-btn" onclick="resetAdminFilters()">↩️ Reset filter</button>
+        </div>
+        <div id="adminFilterCount" class="admin-note">Menampilkan semua perangkat</div>
+      </div>
+      <div id="adminLogs"></div>
+      <button class="admin-btn admin-close" onclick="adminLogout()">Keluar Admin</button>
+    </div>
+  </div>
+</div>
+
+<div id="maint">
+  <div>
+    <div class="mtico" id="maintIco">🛠️</div>
+    <h2>Sedang pemeliharaan</h2>
+    <p id="maintTxt">Ren Weather sedang dirawat sebentar. Silakan kembali lagi nanti.</p>
+  </div>
+</div>
+
+<section id="home" class="page active">
+  <div class="sunball-home"></div>
+  <div class="cloud" id="lcloud">
+    <div class="ltxt">Ren Weather</div>
+    <button class="lbtn" onclick="openLogin()">Login</button>
+  </div>
+</section>
+
+<section id="login" class="page">
+  <div class="box glass">
+    <div class="logo">☁️</div>
+    <h1>Ren Weather</h1>
+    <div class="sub">Kenalan dulu yuk!</div>
+    <label>Nama kamu</label>
+    <input id="name" maxlength="25" placeholder="Masukkan nama..." onkeydown="if(event.key==='Enter')goCity()">
+    <label>Gender</label>
+    <div class="gender">
+      <button onclick="genderPick(this,'Laki-laki')">👦 Laki-laki</button>
+      <button onclick="genderPick(this,'Perempuan')">👧 Perempuan</button>
+    </div>
+    <button class="main" onclick="goCity()">Lanjutkan ✨</button><button class="bottom" style="margin-top:10px" onclick="continueGuest()">👤 Lanjut sebagai tamu</button>
+    <div class="ds" style="text-align:center;color:#527c8d;margin-top:10px">Nama, gender, dan kota yang kamu cari dicatat untuk statistik.</div>
+    <div id="loginErr" class="err"></div>
+  </div>
+</section>
+
+<section id="city" class="page">
+  <div class="box glass">
+    <div class="city-icon">🏙️</div>
+    <div class="city-title">Pilih kotamu</div>
+    <div class="sub">Cari kotamu, atau pakai lokasi (opsional).</div>
+    <div class="city-search">
+      <input id="cityInput" placeholder="Contoh: Lamongan" autocomplete="off" oninput="onCityType()" onkeydown="cityKey(event)">
+      <button class="search" onclick="findCity()">🔎</button>
+    </div>
+    <div id="sugg" class="sugg"></div>
+    <div class="chips">
+      <button class="chip" onclick="quick('Lamongan')">Lamongan</button>
+      <button class="chip" onclick="quick('Surabaya')">Surabaya</button>
+      <button class="chip" onclick="quick('Jakarta')">Jakarta</button>
+      <button class="chip" onclick="quick('Bandung')">Bandung</button>
+      <button class="chip" onclick="quick('Malang')">Malang</button>
+      <button class="chip" onclick="quick('Kediri')">Kediri</button>
+      <button class="chip" id="gpsChip" onclick="useGps()">📍 Lokasi saya</button>
+    </div>
+    <div id="recent" class="chips"></div>
+    <div id="cityErr" class="err"></div>
+  </div>
+</section>
+
+<section id="weather" class="page">
+  <div id="wxbg"><canvas id="wxcv"></canvas></div>
+  <div id="ptr">↻</div>
+  <div class="wrap">
+    <header class="header">
+      <div class="headrow">
+        <div class="cityname" id="headerCity">Memuat...</div>
+        <div class="actions">
+          <button id="favBtn" onclick="toggleFav()" title="Favorit">☆</button>
+          <button id="shareBtn" onclick="shareWeather()" title="Bagikan">📤</button>
+          <button id="refBtn" onclick="loadWeather()" title="Refresh">↻</button>
+          <button onclick="changeCity()" title="Ganti kota">🏙️</button>
+          <button onclick="changeUser()" title="Ganti pengguna">👤</button>
+        </div>
+      </div>
+    </header>
+    <div id="content"><div class="loading">⟳ Memuat cuaca...</div></div>
+  </div>
+</section>
+
+<script>
+/* ===== DASAR ===== */
+const ls={
+  get:k=>{try{return localStorage.getItem(k)}catch(e){return null}},
+  set:(k,v)=>{try{localStorage.setItem(k,v)}catch(e){}},
+  del:k=>{try{localStorage.removeItem(k)}catch(e){}}
+};
+let gender="",loc=null,weather=null,air=null,opening=false,weatherReadyAt=0,navLock=false;
+let offline=false,cacheTs=0,prev=null,animateNext=true,shareSky=["#2f86dc","#8fd3f7"];
+let units={t:"c",w:"kmh"};
+try{units=Object.assign(units,JSON.parse(ls.get("renUnits")||"{}"))}catch(e){}
+let favs=[];
+try{favs=JSON.parse(ls.get("renFavs")||"[]")}catch(e){}
+let recent=[];
+try{recent=JSON.parse(ls.get("renRecent")||"[]")}catch(e){}
+let notifOn=ls.get("renNotif")==="1";
+const $=id=>document.getElementById(id);
+const esc=t=>String(t).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const reduced=()=>matchMedia("(prefers-reduced-motion: reduce)").matches||ls.get("renFx")==="0";
+const RAINC=[51,53,55,56,57,61,63,65,66,67,80,81,82,95,96,99];
+const hh=t=>String(new Date(t).getHours()).padStart(2,"0")+":00";
+/* waktu "sekarang" di kota yang dipilih, dibandingkan dengan string waktu dari API */
+const cityNow=()=>Date.now()+(weather&&weather.utc_offset_seconds!=null?weather.utc_offset_seconds*1000+new Date().getTimezoneOffset()*60000:0);
+
+/* ===== NAVIGASI ===== */
+function page(from,to,mode){
+  if(navLock)return;
+  navLock=true;
+  setTimeout(()=>{navLock=false},900);
+  const a=$(from),b=$(to);
+  if(mode==="fade"){
+    b.classList.add("fade");
+    void b.offsetWidth;
+    b.classList.add("active");
+    if(to==="login")sunToCard();
+    if(to==="city"){dropToCard();cityFx()}
+    a.classList.add("fadeout");
+    setTimeout(()=>a.classList.remove("active","fadeout"),600);
+    setTimeout(()=>b.classList.remove("fade"),700);
+    return;
+  }
+  b.classList.add("active");
+  requestAnimationFrame(()=>a.classList.add("exit"));
+  setTimeout(()=>a.classList.remove("active","exit"),900);
+}
+function openLogin(){
+  const c=$("lcloud");
+  if(opening||!c.classList.contains("ready"))return;
+  opening=true;
+  c.classList.remove("ready");
+  c.style.transition="transform .5s,opacity .7s .25s";
+  c.style.transform="translate(-50%,-50%) scale(1.15)";
+  c.style.opacity="0";
+  setTimeout(()=>page("home","login","fade"),450);
+}
+
+/* ===== HUJAN (dipakai halaman awal dan halaman kota) ===== */
+function startRain(host){
+  const cv=document.createElement("canvas");
+  cv.className="rain-cv";
+  host.prepend(cv);
+  const ctx=cv.getContext("2d");
+  const size=()=>{
+    const r=Math.min(devicePixelRatio||1,1.25);
+    cv.width=innerWidth*r;cv.height=innerHeight*r;
+    ctx.setTransform(r,0,0,r,0,0);
+  };
+  size();
+  addEventListener("resize",size);
+  const drops=[];
+  for(let i=0;i<280;i++)drops.push({x:Math.random()*(innerWidth+120),y:-Math.random()*innerHeight*1.2,l:12+Math.random()*16,v:700+Math.random()*500});
+  let level=0,target=0,started=false,last=performance.now();
+  function stop(){cv.remove();removeEventListener("resize",size)}
+  function frame(t){
+    if(!cv.isConnected||!host.classList.contains("active")){stop();return}
+    if(started&&target===0&&level<.01){stop();return}
+    const dt=Math.min((t-last)/1000,.05);
+    last=t;
+    level+=(target-level)*Math.min(1,dt*4);
+    ctx.clearRect(0,0,innerWidth,innerHeight);
+    const n=Math.floor(drops.length*level);
+    if(n>0){
+      ctx.lineWidth=1.4;
+      ctx.strokeStyle="rgba(200,230,255,.5)";
+      ctx.beginPath();
+      for(let i=0;i<n;i++){
+        const d=drops[i];
+        d.y+=d.v*dt;d.x-=d.v*dt*.18;
+        if(d.y>innerHeight){d.y=-20;d.x=Math.random()*(innerWidth+120)}
+        ctx.moveTo(d.x,d.y);ctx.lineTo(d.x+d.l*.18,d.y-d.l);
+      }
+      ctx.stroke();
+    }
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+  return{set:v=>{target=v;if(v>0)started=true}};
+}
+
+/* ===== HALAMAN AWAL ===== */
+const T_RAIN=150,T_CLEAR=2000;
+function intro(){
+  const home=$("home"),cloud=$("lcloud");
+  if(!home||!home.classList.contains("active"))return;
+  if(reduced()){cloud.style.opacity=1;cloud.classList.add("show","ready");return}
+  home.classList.add("rainy");
+  const dark=document.createElement("div");
+  dark.className="rain-dark";
+  home.prepend(dark);
+  const rain=startRain(home);
+  setTimeout(()=>{dark.classList.add("on");rain.set(1)},T_RAIN);
+  setTimeout(()=>{
+    dark.classList.remove("on");rain.set(0);home.classList.remove("rainy");
+    passClouds(home,cloud);
+  },T_CLEAR);
+  setTimeout(()=>dark.remove(),T_CLEAR+1200);
+}
+function passClouds(home,cloud){
+  const sc=document.createElement("div");
+  sc.className="scene";
+  let h="";
+  for(let i=0;i<5;i++)h+='<div class="sc" style="top:'+(10+i*9)+'%;--s:'+(.8+(i%3)*.25)+';animation-duration:9s;animation-delay:-'+(i*1.7)+'s"></div>';
+  sc.innerHTML=h;
+  home.prepend(sc);
+  setTimeout(()=>pickCloud(sc,cloud),2600);
+}
+function pickCloud(sc,cloud){
+  const all=[...sc.children];
+  const list=all.filter(e=>{const r=e.getBoundingClientRect();return r.left>20&&r.right<innerWidth-20});
+  const c=list.length?list[Math.floor(Math.random()*list.length)]:all[0];
+  const r=c.getBoundingClientRect();
+  const k=r.width/cloud.offsetWidth;
+  c.style.animationPlayState="paused";
+  all.forEach(e=>{if(e!==c){e.style.transition="opacity .6s";e.style.opacity=0}});
+  cloud.style.transition="none";
+  cloud.style.left=(r.left+r.width/2)+"px";
+  cloud.style.top=(r.top+r.height/2)+"px";
+  cloud.style.transform="translate(-50%,-50%) scale("+k+")";
+  cloud.style.opacity=0;
+  void cloud.offsetWidth;
+  cloud.style.transition="opacity .25s,left 1.2s cubic-bezier(.4,0,.8,.6),top 1.2s cubic-bezier(.5,0,.9,.5),transform 1.2s cubic-bezier(.2,.9,.3,1.05)";
+  cloud.style.opacity=1;
+  cloud.style.left="50%";
+  cloud.style.top="40%";
+  cloud.style.transform="translate(-50%,-50%) scale(1)";
+  setTimeout(()=>{c.style.visibility="hidden"},260);
+  setTimeout(()=>sc.remove(),1000);
+  setTimeout(()=>cloud.classList.add("show"),1100);
+  setTimeout(()=>cloud.classList.add("ready"),1900);
+}
+
+/* ===== HALAMAN LOGIN ===== */
+function sunToCard(){
+  const box=document.querySelector("#login .box");
+  box.classList.remove("sunmode","rev");
+  box.style.cssText="";
+  [...box.children].forEach((k,i)=>k.style.setProperty("--i",i));
+  if(reduced()){box.classList.add("rev");return}
+  const r=box.getBoundingClientRect(),w=r.width,h=r.height,S=90;
+  const dx=innerWidth*.95-S/2-(r.left+w/2);
+  const dy=innerHeight*.07+S/2-(r.top+h/2);
+  const sc="scale("+(S/w)+","+(S/h)+")";
+  box.style.width=w+"px";
+  box.style.height=h+"px";
+  box.style.transition="none";
+  box.style.translate=dx+"px 0px";
+  box.style.transform="translateY("+dy+"px) "+sc;
+  box.classList.add("sunmode");
+  void box.offsetWidth;
+  setTimeout(()=>{
+    box.style.transition="translate .7s cubic-bezier(.25,.6,.35,1),transform .7s cubic-bezier(.55,0,.9,.6)";
+    box.style.translate="0px 0px";
+    box.style.transform="translateY(0px) "+sc;
+  },40);
+  setTimeout(()=>{
+    box.style.transition="transform .6s cubic-bezier(.34,1.4,.64,1),border-radius .6s,background .6s,box-shadow .6s,border-color .6s";
+    box.style.transform="translateY(0px) scale(1,1)";
+    box.classList.remove("sunmode");
+    setTimeout(()=>box.classList.add("rev"),250);
+  },780);
+  setTimeout(()=>{box.style.cssText=""},2000);
+}
+
+/* ===== HALAMAN KOTA ===== */
+function cityFx(){
+  const c=$("city");
+  c.querySelectorAll(".rain-cv,.rain-dark").forEach(e=>e.remove());
+  if(reduced())return;
+  const d=document.createElement("div");
+  d.className="rain-dark on";
+  c.prepend(d);
+  startRain(c).set(.6);
+}
+function dropToCard(){
+  renderRecent();
+  const box=document.querySelector("#city .box");
+  box.classList.remove("dropmode","rev");
+  box.style.cssText="";
+  [...box.children].forEach((k,i)=>k.style.setProperty("--i",i));
+  if(reduced()){box.classList.add("rev");return}
+  const r=box.getBoundingClientRect(),w=r.width,h=r.height,D=600;
+  const sc="scale("+(26/w)+","+(38/h)+")";
+  const up=-(r.top+h/2)-60;
+  box.style.width=w+"px";
+  box.style.height=h+"px";
+  box.style.transition="none";
+  box.style.transform="translateY("+up+"px) "+sc;
+  box.classList.add("dropmode");
+  void box.offsetWidth;
+  setTimeout(()=>{
+    box.style.transition="transform .95s cubic-bezier(.5,0,.9,.55)";
+    box.style.transform="translateY(0px) "+sc;
+  },D);
+  setTimeout(()=>{
+    box.style.transition="transform .65s cubic-bezier(.34,1.45,.64,1),border-radius .65s,background .65s,box-shadow .65s";
+    box.style.transform="translateY(0px) scale(1,1)";
+    box.classList.remove("dropmode");
+    setTimeout(()=>box.classList.add("rev"),260);
+  },D+1050);
+  setTimeout(()=>{box.style.cssText=""},D+2400);
+}
+
+/* ===== ANIMASI LATAR LOGIN ===== */
+function mountain(d,color,dur,h){
+  return'<svg class="mt" style="height:'+h+'vh;animation-duration:'+dur+'s" viewBox="0 0 2400 300" preserveAspectRatio="none" fill="'+color+'"><path d="'+d+'"/><path d="'+d+'" transform="translate(1200)"/></svg>';
+}
+function buildScene(p){
+  const login=$("login");
+  const old=login.querySelector(".scene");
+  if(old)old.remove();
+  const M={day:["#8fc6e0","#5da4c4"],dawn:["#c79bb5","#8a6f9e"],dusk:["#9a7aa8","#5d4a86"],night:["#2c3a6e","#18224a"]}[p];
+  const CL={day:"#fff",dawn:"#ffe6d6",dusk:"#ffd2c2",night:"#55608f"}[p];
+  const back="M0 300V200L150 110L260 190L400 80L560 200L700 130L860 210L1000 100L1120 180L1200 200V300Z";
+  const front="M0 300V230L120 170L240 235L380 150L520 240L680 180L820 245L980 160L1100 230L1200 230V300Z";
+  let html="";
+  if(p==="night"){
+    for(let i=0;i<45;i++)html+='<i class="star" style="left:'+(Math.random()*100)+'%;top:'+(Math.random()*55)+'%;animation-delay:-'+(Math.random()*3)+'s"></i>';
+    html+='<div class="moon"></div>';
+  }
+  [[8,.9,40,-5],[22,.7,55,-30],[34,1.1,48,-14],[14,.8,62,-45]].forEach(c=>{
+    html+='<div class="sc" style="top:'+c[0]+'%;--s:'+c[1]+';animation-duration:'+c[2]+'s;animation-delay:'+c[3]+'s"></div>';
+  });
+  html+=mountain(back,M[0],70,42)+mountain(front,M[1],40,30);
+  if(p!=="night")[[12,34,19,-2],[18,26,23,-9],[9,22,27,-15],[26,30,21,-6],[15,20,30,-21]].forEach(b=>{
+    html+='<div class="bird" style="top:'+b[0]+'%;animation-duration:'+b[2]+'s;animation-delay:'+b[3]+'s"><svg width="'+b[1]+'" height="'+(b[1]*.45)+'" viewBox="0 0 32 14"><path d="M1 12Q8 0 16 9Q24 0 31 12" fill="none" stroke="#3b5f73" stroke-width="2" stroke-linecap="round"/></svg></div>';
+  });
+  const sc=document.createElement("div");
+  sc.className="scene";
+  sc.style.setProperty("--cl",CL);
+  sc.innerHTML=html;
+  login.prepend(sc);
+}
+
+/* ===== TEMA LANGIT SESUAI JAM ===== */
+let curPhase="";
+function applyTimeTheme(){
+  const d=new Date(),h=d.getHours()+d.getMinutes()/60;
+  const p=h<5||h>=19?"night":h<7?"dawn":h>=16.5?"dusk":"day";
+  if(p===curPhase)return;
+  curPhase=p;
+  const c={day:["#67cef8","#eafaff"],dawn:["#7f8fd6","#ffd9b8"],dusk:["#5a4a9a","#ffb68a"],night:["#0d1538","#2a3a78"]}[p];
+  document.body.classList.remove("day","dawn","dusk","night");
+  document.body.classList.add(p);
+  document.body.style.setProperty("--sk1",c[0]);
+  document.body.style.setProperty("--sk2",c[1]);
+  buildScene(p);
+}
+
+/* ===== LOGIN ===== */
+function genderPick(btn,value){
+  document.querySelectorAll(".gender button").forEach(x=>x.classList.remove("selected"));
+  btn.classList.add("selected");
+  gender=value;
+}
+function goCity(){
+  const name=$("name").value.trim(),err=$("loginErr");
+  err.textContent="";
+  if(!name){err.textContent="Masukkan nama kamu dulu.";return}
+  const banned=String(ls.get("renBannedWords")||"").split(",").map(x=>x.trim().toLocaleLowerCase("id-ID")).filter(Boolean);
+  if(banned.some(w=>name.toLocaleLowerCase("id-ID").includes(w))){err.textContent="Nama mengandung kata yang tidak diizinkan.";return}
+  if(!gender){err.textContent="Pilih gender dulu.";return}
+  ls.set("renName",name);
+  ls.set("renGender",gender);
+  addAdminLog("login",{name:name,gender:gender});
+  page("login","city","fade");
+}
+
+/* ===== KOTA: pencarian, saran otomatis, riwayat ===== */
+function quick(city){$("cityInput").value=city;$("sugg").classList.remove("on");findCity()}
+function cityKey(e){if(e.key==="Enter"){$("sugg").classList.remove("on");findCity()}}
+let sgT=0,sgList=[];
+function onCityType(){
+  clearTimeout(sgT);
+  const q=$("cityInput").value.trim();
+  if(q.length<2){sgList=[];paintSugg();return}
+  sgT=setTimeout(()=>suggest(q),300);
+}
+async function suggest(q){
+  try{
+    const r=await fetch("https://geocoding-api.open-meteo.com/v1/search?name="+encodeURIComponent(q)+"&count=5&language=id&format=json");
+    const d=await r.json();
+    if($("cityInput").value.trim()!==q)return;
+    sgList=d.results||[];
+    paintSugg();
+  }catch(e){}
+}
+function paintSugg(){
+  const s=$("sugg");
+  s.innerHTML=sgList.map((p,k)=>'<button class="sg" style="--d:'+(k*50)+'ms" onclick="pickSugg('+k+')"><b>'+esc(p.name)+'</b><span>'+esc([p.admin1,p.country].filter(Boolean).join(", "))+'</span></button>').join("");
+  s.classList.toggle("on",sgList.length>0);
+}
+function pickSugg(k){
+  const p=sgList[k];
+  if(!p||trBusy)return;
+  $("sugg").classList.remove("on");
+  $("cityErr").textContent="";
+  addAdminLog("city",{name:ls.get("renName")||"Tanpa nama",query:$("cityInput").value.trim(),result:p.name});
+  enterWeather(p.latitude,p.longitude,p.name);
+}
+function addRecent(lat,lon,name){
+  recent=recent.filter(r=>!(Math.abs(r.lat-lat)<.01&&Math.abs(r.lon-lon)<.01));
+  recent.unshift({lat,lon,name});
+  recent=recent.slice(0,6);
+  ls.set("renRecent",JSON.stringify(recent));
+}
+function renderRecent(){
+  const el=$("recent");
+  if(!el)return;
+  el.innerHTML=recent.length?'<div class="rcap">Riwayat pencarian</div>'+recent.map((r,k)=>'<button class="chip" onclick="pickRecent('+k+')">🕘 '+esc(r.name)+'</button>').join("")+'<button class="chip" onclick="clearRecent()" title="Hapus riwayat">✕</button>':"";
+}
+function pickRecent(k){
+  const r=recent[k];
+  if(!r||trBusy)return;
+  addAdminLog("city",{name:ls.get("renName")||"Tanpa nama",query:r.name,result:r.name});
+  enterWeather(r.lat,r.lon,r.name);
+}
+function clearRecent(){recent=[];ls.del("renRecent");renderRecent()}
+
+async function findCity(){
+  if(trBusy)return;
+  const q=$("cityInput").value.trim(),err=$("cityErr");
+  if(!q){err.textContent="Masukkan nama kota.";return}
+  err.textContent="🔎 Mencari kota...";
+  try{
+    const res=await fetch("https://geocoding-api.open-meteo.com/v1/search?name="+encodeURIComponent(q)+"&count=1&language=id&format=json");
+    const data=await res.json();
+    if(!data.results||!data.results.length){err.textContent="Kota tidak ditemukan.";return}
+    const p=data.results[0];
+    err.textContent="";
+    addAdminLog("city",{name:ls.get("renName")||"Tanpa nama",query:q,result:p.name});
+    enterWeather(p.latitude,p.longitude,p.name);
+  }catch(e){err.textContent="Gagal terhubung. Periksa internet."}
+}
+function savedLocation(){
+  const lat=ls.get("renLat"),lon=ls.get("renLon"),name=ls.get("renCity");
+  return lat&&lon?{lat:+lat,lon:+lon,name:name||"Kota"}:null;
+}
+
+/* ===== CUACA ===== */
+const ck=l=>l.lat.toFixed(2)+","+l.lon.toFixed(2);
+function cacheGet(){try{return JSON.parse(ls.get("renCache")||"{}")[ck(loc)]||null}catch(e){return null}}
+function cachePut(en){
+  try{
+    const all=JSON.parse(ls.get("renCache")||"{}");
+    all[ck(loc)]=en;
+    Object.keys(all).sort((x,y)=>all[y].ts-all[x].ts).slice(5).forEach(k=>delete all[k]);
+    ls.set("renCache",JSON.stringify(all));
+  }catch(e){}
+}
+const waitReady=async()=>{const w=weatherReadyAt-Date.now();if(w>0)await new Promise(ok=>setTimeout(ok,w))};
+
+async function loadWeather(){
+  if(!loc)loc=savedLocation();
+  if(!loc){changeCity();return}
+  const my=loc;
+  $("headerCity").textContent=loc.name;
+  $("favBtn").textContent=isFav()?"★":"☆";
+  const hourly="temperature_2m,relative_humidity_2m,apparent_temperature,precipitation_probability,precipitation,weather_code,cloud_cover,visibility,pressure_msl,wind_speed_10m,wind_direction_10m,wind_gusts_10m";
+  const daily="weather_code,temperature_2m_max,temperature_2m_min,apparent_temperature_max,apparent_temperature_min,precipitation_probability_max,precipitation_sum,wind_speed_10m_max,wind_gusts_10m_max,wind_direction_10m_dominant,uv_index_max,sunrise,sunset,daylight_duration";
+  const q="latitude="+loc.lat+"&longitude="+loc.lon+"&timezone=auto";
+  const reqs=Promise.all([
+    fetch("https://api.open-meteo.com/v1/forecast?"+q+"&forecast_days=16&hourly="+hourly+"&daily="+daily),
+    fetch("https://air-quality-api.open-meteo.com/v1/air-quality?"+q+"&forecast_days=7&hourly=us_aqi,pm2_5,pm10,ozone,nitrogen_dioxide,sulphur_dioxide,uv_index"),
+    fetch("https://api.open-meteo.com/v1/forecast?"+q+"&past_days=1&forecast_days=1&daily=temperature_2m_max,temperature_2m_min").then(x=>x.ok?x.json():null).catch(()=>null)
+  ]);
+  reqs.catch(()=>{});
+  const btn=$("refBtn");
+  btn.classList.add("busy");
+  try{
+    if(!weather){
+      $("content").innerHTML='<div class="loading"><span class="spin">⟳</span><br><br>Memuat cuaca lengkap...</div>';
+      const c=cacheGet();
+      if(c){
+        await waitReady();
+        if(loc!==my)return;
+        weather=c.w;air=c.a;prev=c.p;cacheTs=c.ts;offline=false;
+        render();
+      }
+    }
+    const r=await reqs;
+    if(!r[0].ok||!r[1].ok)throw new Error();
+    const nw=await r[0].json(),na=await r[1].json();
+    if(loc!==my)return;
+    weather=nw;air=na;prev=r[2]&&r[2].daily?r[2].daily:null;
+    offline=false;cacheTs=Date.now();
+    cachePut({w:weather,a:air,p:prev,ts:cacheTs});
+    await waitReady();
+    if(loc!==my)return;
+    render();
+  }catch(e){
+    if(loc!==my)return;
+    if(weather){offline=true;render()}
+    else $("content").innerHTML='<div class="loading">❌<br><br>Gagal mengambil data cuaca.<br><br><button class="bottom" onclick="loadWeather()">Coba lagi</button></div>';
+  }finally{
+    btn.classList.remove("busy");
+  }
+}
+
+function nowIndex(arr){
+  const now=cityNow();
+  let best=0,diff=Infinity;
+  arr.forEach((v,i)=>{const d=Math.abs(new Date(v).getTime()-now);if(d<diff){diff=d;best=i}});
+  return best;
+}
+
+function wcode(c){
+  const m={0:["☀️","Cerah"],1:["🌤️","Cerah berawan"],2:["⛅","Berawan sebagian"],3:["☁️","Mendung"],45:["🌫️","Berkabut"],48:["🌫️","Kabut"],51:["🌦️","Gerimis ringan"],53:["🌦️","Gerimis"],55:["🌧️","Gerimis lebat"],56:["🌧️","Gerimis beku"],57:["🌧️","Gerimis beku lebat"],61:["🌦️","Hujan ringan"],63:["🌧️","Hujan"],65:["🌧️","Hujan lebat"],66:["🌧️","Hujan beku"],67:["🌧️","Hujan beku lebat"],71:["🌨️","Salju ringan"],73:["❄️","Salju"],75:["❄️","Salju lebat"],77:["❄️","Butiran salju"],80:["🌦️","Hujan lokal"],81:["🌧️","Hujan"],82:["⛈️","Hujan sangat lebat"],85:["🌨️","Hujan salju"],86:["❄️","Hujan salju lebat"],95:["⛈️","Badai petir"],96:["⛈️","Badai petir"],99:["⛈️","Badai petir kuat"]};
+  return m[c]||["🌡️","Tidak diketahui"];
+}
+
+/* ===== SATUAN ===== */
+const cvT=v=>units.t==="f"?v*9/5+32:v;
+const fT=v=>Math.round(cvT(v))+"°";
+const cvW=v=>units.w==="ms"?v/3.6:v;
+const fW=v=>(units.w==="ms"?cvW(v).toFixed(1):Math.round(v))+" "+(units.w==="ms"?"m/s":"km/j");
+function setUnit(k,v){
+  units[k]=v;
+  ls.set("renUnits",JSON.stringify(units));
+  if(weather)render();
+}
+function setFx(on){
+  ls.set("renFx",on?"1":"0");
+  if(weather){animateNext=false;render()}
+}
+
+/* ===== HELPER ===== */
+const detail=(icon,label,value,sub)=>`<div class="detail glass"><div class="di">${icon}</div><div class="muted">${label}</div><div class="dv">${value}</div><div class="ds">${sub}</div></div>`;
+const pollutant=(name,value)=>`<div><div class="muted">${name}</div><b>${value}</b> <span class="ds">µg/m³</span></div>`;
+const fmtTime=v=>new Date(v).toLocaleTimeString("id-ID",{hour:"2-digit",minute:"2-digit"});
+const fmtDuration=s=>Math.floor(s/3600)+" jam "+Math.round((s%3600)/60)+" menit";
+const direction=deg=>["Utara","Timur Laut","Timur","Tenggara","Selatan","Barat Daya","Barat","Barat Laut"][Math.round(deg/45)%8];
+const visibility=m=>m>=1000?(m/1000).toFixed(1)+" km":Math.round(m)+" m";
+function uvText(v){
+  if(v==null)return"Data tidak tersedia";
+  if(v<3)return"Rendah";
+  if(v<6)return"Sedang";
+  if(v<8)return"Tinggi";
+  if(v<11)return"Sangat tinggi";
+  return"Ekstrem";
+}
+function airValue(name,i){
+  const v=air.hourly[name]?.[i];
+  return v==null?"--":Number(v).toFixed(1);
+}
+const life=(icon,title,ok)=>`<div class="life"><div class="li">${icon}</div><div class="lt">${title}<br>${ok?"✓ Cukup sesuai":"• Perlu diperhatikan"}</div></div>`;
+
+function hourChart(h,st){
+  const n=Math.min(24,h.time.length-st),W=94*n-10,H=74,pad=16,v=[];
+  for(let k=0;k<n;k++)v.push(cvT(h.temperature_2m[st+k]));
+  const mn=Math.min(...v),mx=Math.max(...v),sp=Math.max(mx-mn,1);
+  const pt=v.map((x,k)=>[42+k*94,pad+(1-(x-mn)/sp)*(H-pad*2)]);
+  let d="M"+pt[0][0]+" "+pt[0][1];
+  for(let k=1;k<n;k++){const a=pt[k-1],b=pt[k],m=(a[0]+b[0])/2;d+=" C"+m+" "+a[1]+" "+m+" "+b[1]+" "+b[0]+" "+b[1]}
+  const L=pt[n-1];
+  return '<svg class="hch" width="'+W+'" height="'+H+'" viewBox="0 0 '+W+' '+H+'"><defs><linearGradient id="hg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".35"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient></defs><path d="'+d+' L'+L[0]+' '+H+' L'+pt[0][0]+' '+H+' Z" fill="url(#hg)"/><path d="'+d+'" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round"/>'+pt.map(q=>'<circle cx="'+q[0]+'" cy="'+q[1]+'" r="4" fill="#fff"/>').join("")+'</svg>';
+}
+function rainBars(h,st){
+  const n=Math.min(24,h.time.length-st),W=94*n-10,H=64;
+  let b="";
+  for(let k=0;k<n;k++){
+    const pr=h.precipitation_probability[st+k]||0,bh=Math.max(2,pr/100*40),x=42+k*94;
+    b+='<rect x="'+(x-13)+'" y="'+(H-14-bh)+'" width="26" height="'+bh+'" rx="6" fill="#aee7ff" fill-opacity="'+(.35+pr/160)+'"/><text x="'+x+'" y="'+(H-2)+'" text-anchor="middle" fill="#fff" fill-opacity=".75" font-size="11">'+pr+'%</text>';
+  }
+  return '<svg width="'+W+'" height="'+H+'" viewBox="0 0 '+W+' '+H+'">'+b+'</svg>';
+}
+function renderHours(start){
+  const h=weather.hourly,n=Math.min(24,h.time.length-start);
+  let cards="";
+  for(let k=0;k<n;k++){
+    const i=start+k,info=wcode(h.weather_code[i]);
+    const time=String(new Date(h.time[i]).getHours()).padStart(2,"0")+":00";
+    cards+=`<div class="hour glass"><div class="muted">${k===0?"Sekarang":time}</div><div class="i">${info[0]}</div><div class="t">${fT(h.temperature_2m[i])}</div><div class="rain">💧 ${h.precipitation_probability[i]||0}%</div></div>`;
+  }
+  return `<div class="hwrap"><div class="hin" style="width:${94*n-10}px">${hourChart(h,start)}<div class="hours">${cards}</div><div class="cap">Peluang hujan per jam</div>${rainBars(h,start)}</div></div>`;
+}
+function renderDays(){
+  const d=weather.daily;
+  let out="";
+  const n=Math.min(16,d.time.length);
+  for(let i=0;i<n;i++){
+    const date=new Date(d.time[i]+"T12:00:00"),info=wcode(d.weather_code[i]);
+    const label=i===0?"Hari ini":i===1?"Besok":date.toLocaleDateString("id-ID",{weekday:"short"});
+    out+=`<div class="frow"><div><b>${date.toLocaleDateString("id-ID",{day:"numeric",month:"numeric"})}</b><br><span class="muted">${label}</span></div><div class="fi">${info[0]}</div><div class="ft">${fT(d.temperature_2m_min[i])} / ${fT(d.temperature_2m_max[i])}</div></div>`;
+  }
+  return out;
+}
+/* rentang suhu 7 hari (bar animasi) */
+function rangeBars(){
+  const d=weather.daily,n=Math.min(7,d.time.length);
+  let mn=Infinity,mx=-Infinity;
+  for(let k=0;k<n;k++){mn=Math.min(mn,d.temperature_2m_min[k]);mx=Math.max(mx,d.temperature_2m_max[k])}
+  const sp=Math.max(mx-mn,1);
+  let o="";
+  for(let k=0;k<n;k++){
+    const a=(d.temperature_2m_min[k]-mn)/sp*100,b=(d.temperature_2m_max[k]-mn)/sp*100;
+    const lab=k===0?"Hari ini":new Date(d.time[k]+"T12:00:00").toLocaleDateString("id-ID",{weekday:"short"});
+    o+=`<div class="rb"><span>${lab}</span><span class="muted">${fT(d.temperature_2m_min[k])}</span><div class="rtrack"><div class="rfill" style="--k:${k};left:${a}%;width:${Math.max(b-a,5)}%"></div></div><b>${fT(d.temperature_2m_max[k])}</b></div>`;
+  }
+  return o;
+}
+
+/* peringatan hujan 12 jam ke depan */
+function rainAlert(h,i){
+  for(let k=i;k<Math.min(i+13,h.time.length);k++){
+    if(h.precipitation_probability[k]>=60||h.precipitation[k]>=0.5){
+      return{now:k===i,hrs:k-i,p:h.precipitation_probability[k]||0,time:String(new Date(h.time[k]).getHours()).padStart(2,"0")+":00"};
+    }
+  }
+  return null;
+}
+/* peringatan cuaca ekstrem */
+function extremeAlerts(h,d,i,uv,aqi,feel){
+  const a=[],end=Math.min(i+13,h.time.length);
+  let gust=0,storm=-1;
+  for(let k=i;k<end;k++){
+    gust=Math.max(gust,h.wind_gusts_10m[k]||0);
+    if(storm<0&&[95,96,99].includes(h.weather_code[k]))storm=k;
+  }
+  if(storm>=0)a.push("⛈️ Potensi badai petir sekitar jam "+hh(h.time[storm])+". Hindari tempat terbuka.");
+  if(gust>=50)a.push("💨 Hembusan angin hingga "+fW(gust)+" dalam 12 jam ke depan. Hati-hati di luar ruangan.");
+  if(feel>=38)a.push("🥵 Suhu terasa sangat panas ("+fT(feel)+"). Perbanyak minum dan hindari aktivitas berat di luar.");
+  if(uv!=null&&uv>=11)a.push("🧴 Indeks UV ekstrem. Gunakan pelindung dan hindari matahari siang.");
+  if(aqi!=null&&aqi>150)a.push("😷 Kualitas udara tidak sehat. Pertimbangkan memakai masker.");
+  if((d.precipitation_sum[0]||0)>=50)a.push("🌊 Curah hujan harian tinggi ("+Math.round(d.precipitation_sum[0])+" mm). Waspada genangan.");
+  return a;
+}
+/* waktu terbaik beraktivitas di luar (jendela 2 jam, 24 jam ke depan) */
+function bestTime(h,i){
+  const um={};
+  air.hourly.time.forEach((t,k)=>{um[t]=air.hourly.uv_index[k]});
+  const sc=[];
+  for(let k=i;k<Math.min(i+24,h.time.length);k++){
+    const hr=new Date(h.time[k]).getHours();
+    if(hr<5||hr>18){sc.push(null);continue}
+    const f=h.apparent_temperature[k],u=um[h.time[k]]||0;
+    sc.push((h.precipitation_probability[k]||0)+Math.max(0,f-29)*6+Math.max(0,22-f)*4+Math.max(0,u-5)*8+Math.max(0,(h.wind_gusts_10m[k]||0)-35));
+  }
+  let best=null;
+  for(let k=0;k<sc.length-1;k++){
+    if(sc[k]==null||sc[k+1]==null)continue;
+    const s=sc[k]+sc[k+1];
+    if(!best||s<best.s)best={s:s,k:k};
+  }
+  if(!best)return null;
+  const a=i+best.k;
+  return{from:hh(h.time[a]),to:hh(h.time[Math.min(a+2,h.time.length-1)]),ok:best.s/2<40};
+}
+function moonPhase(date){
+  let ph=((date.getTime()-Date.UTC(2000,0,6,18,14))/86400000/29.530588853)%1;
+  if(ph<0)ph+=1;
+  const k=Math.round(ph*8)%8;
+  return{e:["🌑","🌒","🌓","🌔","🌕","🌖","🌗","🌘"][k],n:["Bulan baru","Sabit awal","Perbani awal","Cembung awal","Purnama","Cembung akhir","Perbani akhir","Sabit akhir"][k],il:Math.round((1-Math.cos(2*Math.PI*ph))/2*100)};
+}
+function sunArc(d){
+  const sr=new Date(d.sunrise[0]).getTime(),ss=new Date(d.sunset[0]).getTime();
+  let p=(cityNow()-sr)/(ss-sr);
+  const up=p>=0&&p<=1;
+  p=Math.max(0,Math.min(1,p));
+  const x=150-130*Math.cos(p*Math.PI),y=100-80*Math.sin(p*Math.PI);
+  return '<svg viewBox="0 0 300 118" class="arc"><line x1="10" y1="100" x2="290" y2="100" stroke="#ffffff44"/><path d="M20 100A130 80 0 0 1 280 100" fill="none" stroke="#ffffff66" stroke-width="3" stroke-dasharray="4 7"/>'+(up?'<circle cx="'+x+'" cy="'+y+'" r="20" fill="#ffe47d" fill-opacity=".25"/>':'')+'<circle cx="'+x+'" cy="'+y+'" r="11" fill="'+(up?"#ffe47d":"#ffffff77")+'"/></svg>';
+}
+function outfit(feel,wind,rainP,uv){
+  const a=[];
+  if(feel>=32)a.push("👕 Kaos tipis dan bahan adem");
+  else if(feel>=27)a.push("👕 Kaos atau kemeja tipis");
+  else if(feel>=22)a.push("👔 Kemeja atau kaos lengan panjang tipis");
+  else if(feel>=17)a.push("🧥 Jaket tipis");
+  else a.push("🧣 Jaket tebal");
+  if(rainP>=40)a.push("☂️ Payung atau jas hujan");
+  if(uv>=6)a.push("🧢 Topi dan tabir surya");
+  if(wind>=30)a.push("🌬️ Jaket anti angin");
+  return a;
+}
+function countUp(){
+  if(reduced())return;
+  document.querySelectorAll("#content [data-n]").forEach(el=>{
+    const to=+el.dataset.n,suf=el.dataset.s||"",t0=performance.now();
+    (function step(t){
+      const p=Math.min(1,(t-t0)/800),e=1-Math.pow(1-p,3);
+      el.textContent=Math.round(to*e)+suf;
+      if(p<1)requestAnimationFrame(step);
+    })(t0);
+  });
+}
+
+/* ===== PENGUMUMAN & PESAN ADMIN ===== */
+let appCfg={},userMsg=null;
+function updateAnn(){
+  const el=$("annSlot");
+  if(!el)return;
+  let h="";
+  if(appCfg.announce&&String(appCfg.announceAt||"")!==ls.get("renAnnSeen"))
+    h+='<div class="ann"><div>📣</div><div><b>Pengumuman</b>'+esc(appCfg.announce)+'</div><button onclick="dismissAnn(\'a\')" title="Tutup">✕</button></div>';
+  if(userMsg&&userMsg.text&&String(userMsg.at)!==ls.get("renMsgSeen"))
+    h+='<div class="ann"><div>💬</div><div><b>Pesan dari admin</b>'+esc(userMsg.text)+'</div><button onclick="dismissAnn(\'m\')" title="Tutup">✕</button></div>';
+  el.innerHTML=h;
+}
+function dismissAnn(k){
+  if(k==="a")ls.set("renAnnSeen",String(appCfg.announceAt||""));
+  else if(userMsg)ls.set("renMsgSeen",String(userMsg.at));
+  updateAnn();
+}
+
+/* ===== RENDER UTAMA ===== */
+function render(){
+  const sc=$("weather"),y0=sc.scrollTop;
+  const h=weather.hourly,d=weather.daily;
+  const i=nowIndex(h.time),ai=nowIndex(air.hourly.time);
+  const info=wcode(h.weather_code[i]);
+  const uv=air.hourly.uv_index[ai],aqi=air.hourly.us_aqi[ai];
+  const aqiText=aqi==null?"Data tidak tersedia":aqi<=50?"Baik":aqi<=100?"Sedang":aqi<=150?"Tidak sehat untuk kelompok sensitif":aqi<=200?"Tidak sehat":aqi<=300?"Sangat tidak sehat":"Berbahaya";
+  const rain=h.precipitation_probability[i]||0,feel=h.apparent_temperature[i];
+  const ra=rainAlert(h,i);
+
+  const nm=ls.get("renName")||"";
+  const hr=new Date(cityNow()).getHours();
+  const sal=hr<4?"malam":hr<11?"pagi":hr<15?"siang":hr<18?"sore":"malam";
+  const av=ls.get("renGender")==="Perempuan"?"👧":"👦";
+  const tip=rain>=40?"Jangan lupa bawa payung ☂️":uv>=8?"UV tinggi, pakai tabir surya 🧴":"Semoga harimu menyenangkan ✨";
+
+  const banner=ra
+    ?`<div class="alert warn">${ra.now?`☔ Sedang hujan atau segera hujan (peluang ${ra.p}%). Bawa payung!`:`☔ Hujan diperkirakan sekitar jam ${ra.time} (peluang ${ra.p}%), kira-kira ${ra.hrs} jam lagi. Bawa payung!`}</div>`
+    :`<div class="alert ok">🌤️ Tidak ada hujan dalam 12 jam ke depan.</div>`;
+  const exHtml=extremeAlerts(h,d,i,uv,aqi,feel).map(t=>`<div class="alert danger">${t}</div>`).join("");
+  const offBar=offline?`<div class="alert off">📴 Offline. Menampilkan data terakhir (${fmtTime(cacheTs)}).</div>`:"";
+
+  let sum="Hari ini "+info[1].toLowerCase()+", "+fT(d.temperature_2m_min[0])+" sampai "+fT(d.temperature_2m_max[0])+". ";
+  sum+=ra?(ra.now?"Hujan sedang atau segera turun.":"Hujan mulai sekitar jam "+ra.time+"."):"Kecil kemungkinan hujan.";
+  let cmp="";
+  if(prev&&prev.temperature_2m_max&&prev.temperature_2m_max.length>=2){
+    const a0=(prev.temperature_2m_max[0]+prev.temperature_2m_min[0])/2,a1=(prev.temperature_2m_max[1]+prev.temperature_2m_min[1])/2;
+    const df=(a1-a0)*(units.t==="f"?1.8:1),r=Math.round(Math.abs(df));
+    cmp=r===0?"Sama hangatnya dengan kemarin":r+"° "+(df>0?"lebih panas":"lebih dingin")+" dari kemarin";
+  }
+
+  let recentRain=false;
+  for(let k=Math.max(0,i-4);k<i;k++){
+    if(h.precipitation[k]>=0.2||RAINC.includes(h.weather_code[k]))recentRain=true;
+  }
+  const rainbow=recentRain&&h.weather_code[i]<=2&&h.precipitation[i]<0.2;
+  const mo=moonPhase(new Date(cityNow()));
+  const tips=outfit(feel,h.wind_speed_10m[i],rain,uv);
+  const bt=bestTime(h,i);
+  const bestHtml=bt?`<div class="bestwrap"><div class="title">Waktu terbaik di luar ruangan</div><div class="best glass"><div class="muted">Dalam 24 jam ke depan</div><div class="bt">🕒 ${bt.from} – ${bt.to}</div><div class="ds">${bt.ok?"Peluang hujan rendah dan suhu bersahabat":"Kondisi kurang ideal, ini jendela terbaik yang tersedia"}</div></div></div>`:"";
+
+  const fxOn=ls.get("renFx")!=="0";
+  const favBar=favs.length?`<div class="favs">${favs.map((f,k)=>`<button class="fav ${sameLoc(f)?"on":""}" onclick="pickFav(${k})">${esc(f.name)}</button>`).join("")}</div>`:"";
+  const seg=(key,a,b,la,lb)=>`<div class="seg"><button class="${units[key]===a?"on":""}" onclick="setUnit('${key}','${a}')">${la}</button><button class="${units[key]===b?"on":""}" onclick="setUnit('${key}','${b}')">${lb}</button></div>`;
+
+  $("favBtn").textContent=isFav()?"★":"☆";
+  $("content").innerHTML=`
+  ${favBar}
+  <div id="annSlot"></div>
+  <div class="greet"><div class="gh">${av} Selamat ${sal}${nm?", "+esc(nm):""}</div><div class="gt">${tip}</div></div>
+  ${banner}${exHtml}${offBar}
+  <div class="current glass">
+    <div class="icon">${info[0]}</div>
+    <div class="temp" data-n="${Math.round(cvT(h.temperature_2m[i]))}" data-s="°">${fT(h.temperature_2m[i])}</div>
+    <div class="desc">${info[1]}</div>
+    <div class="muted">Terasa seperti ${fT(feel)}</div>
+    <div class="sumline">${sum}</div>
+    ${cmp?`<div class="cmp">${cmp}</div>`:""}
+  </div>
+
+  <div class="title">Cuaca per jam</div>
+  ${renderHours(i)}
+
+  ${bestHtml}
+
+  <div class="title">Rentang suhu 7 hari</div>
+  <div class="suncard glass">${rangeBars()}</div>
+
+  <div class="title">Prakiraan 16 hari</div>
+  <div class="forecast glass">${renderDays()}</div>
+
+  <div class="title">Detail cuaca</div>
+  <div class="grid">
+    ${detail("☀️","Indeks UV",uv==null?"--":Math.round(uv),uvText(uv))}
+    ${detail("🌡️","Terasa seperti",fT(feel),"Suhu terasa")}
+    ${detail("💧","Kelembapan",h.relative_humidity_2m[i]+"%","Kelembapan udara")}
+    ${detail("💨","Angin",fW(h.wind_speed_10m[i]),direction(h.wind_direction_10m[i]))}
+    ${detail("🌬️","Hembusan",fW(h.wind_gusts_10m[i]),"Kecepatan maksimum")}
+    ${detail("⏱️","Tekanan",Math.round(h.pressure_msl[i])+" hPa","Tekanan udara")}
+    ${detail("👁️","Visibilitas",visibility(h.visibility[i]),"Jarak pandang")}
+    ${detail("☁️","Tutupan awan",h.cloud_cover[i]+"%","Langit tertutup")}
+    ${detail("🌧️","Peluang hujan",rain+"%","Kemungkinan hujan")}
+    ${detail("💦","Curah hujan",Number(h.precipitation[i]||0).toFixed(1)+" mm","Per jam")}
+  </div>
+
+  <div class="title">Matahari dan bulan</div>
+  <div class="suncard glass">
+    ${sunArc(d)}
+    <div class="sunrow">
+      <div><div class="muted">🌅 Terbit</div><b>${fmtTime(d.sunrise[0])}</b></div>
+      <div style="text-align:right"><div class="muted">🌇 Terbenam</div><b>${fmtTime(d.sunset[0])}</b></div>
+    </div>
+    <div class="ds" style="margin-top:12px">Durasi siang: ${fmtDuration(d.daylight_duration[0])}</div>
+    <div class="moonrow"><div class="mi">${mo.e}</div><div><b>${mo.n}</b><div class="ds">Penerangan bulan ${mo.il}%</div></div></div>
+  </div>
+
+
+  <div class="title">Kalender cuaca</div>
+  <div class="feature-card glass">
+    <div class="calendar-head"><button onclick="moveCalendar(-1)">‹</button><b id="calMonthLabel">Bulan ini</b><button onclick="moveCalendar(1)">›</button></div>
+    <div id="weatherCalendar" class="calgrid"></div>
+    <div class="ds" style="margin-top:8px">Titik biru menandai hari dengan peluang hujan tinggi.</div>
+  </div>
+
+  <div class="title">Hitung mundur & astronomi</div>
+  <div class="feature-card glass">
+    <div class="feature-line"><span>🌧️ Perkiraan hujan reda</span><b id="rainCountdown">Menghitung…</b></div>
+    <div class="feature-line"><span>🌅 Matahari terbit</span><b id="sunriseCountdown">—</b></div>
+    <div class="feature-line"><span>🌇 Matahari terbenam</span><b id="sunsetCountdown">—</b></div>
+    <div class="feature-line"><span>🌙 Moonrise</span><b id="moonriseValue">Memuat…</b></div>
+    <div class="feature-line"><span>🌘 Moonset</span><b id="moonsetValue">Memuat…</b></div>
+    <div class="feature-line"><span>Fase bulan</span><b>${mo.e} ${mo.n} · ${mo.il}%</b></div>
+  </div>
+
+  <div class="title">Indeks per jam</div>
+  <div class="feature-card glass" id="hourlyRisk"></div>
+
+  <div class="title">Ringkasan otomatis</div>
+  <div class="feature-card glass" id="autoSummary"></div>
+
+  <div class="title">Pencapaian Ren Weather</div>
+  <div class="feature-card glass">
+    <div id="streakDisplay"></div>
+    <div class="badge-list" id="achievementList"></div>
+    <button class="bottom" onclick="tapSunEgg()">☀️ Rahasia matahari</button>
+    <div id="eggMessage" class="guest-note">Coba ketuk tombol ini atau ikon cuaca 5 kali.</div>
+  </div>
+
+  <div class="title">Saran pakaian</div>
+  <div class="suncard glass outfit">${tips.map(t=>`<div>${t}</div>`).join("")}</div>
+
+  <div class="title">Kualitas udara</div>
+  <div class="air glass">
+    <div class="muted">US AQI</div>
+    <div class="aqi" ${aqi==null?"":`data-n="${Math.round(aqi)}"`}>${aqi==null?"--":Math.round(aqi)}</div>
+    <div>${aqiText}</div>
+    <div class="aqibar"></div>
+    <div class="poll">
+      ${pollutant("PM2.5",airValue("pm2_5",ai))}
+      ${pollutant("PM10",airValue("pm10",ai))}
+      ${pollutant("O₃",airValue("ozone",ai))}
+      ${pollutant("NO₂",airValue("nitrogen_dioxide",ai))}
+      ${pollutant("SO₂",airValue("sulphur_dioxide",ai))}
+    </div>
+  </div>
+
+  <div class="title">Aktivitas hari ini</div>
+  <div class="life glass">
+    <div class="lifegrid">
+      ${life("🚗","Cuci kendaraan",rain<30)}
+      ${life("🏃","Aktivitas luar",rain<30)}
+      ${life("☂️","Bawa payung",rain>=40)}
+      ${life("🧴","Perlindungan UV",uv>=6)}
+      ${life("🏠","Aktivitas dalam",rain>=40)}
+      ${life("🌴","Jalan-jalan",rain<30)}
+    </div>
+  </div>
+
+  <div class="title">Pengaturan</div>
+  <div class="set glass">
+    <div class="srow"><span>Suhu</span>${seg("t","c","f","°C","°F")}</div>
+    <div class="srow"><span>Kecepatan angin</span>${seg("w","kmh","ms","km/j","m/s")}</div>
+    <div class="srow"><span>Efek animasi latar</span><div class="seg"><button class="${fxOn?"on":""}" onclick="setFx(1)">Hidup</button><button class="${fxOn?"":"on"}" onclick="setFx(0)">Hemat</button></div></div>
+    <div class="srow" id="notifRow"><span>Notifikasi hujan</span><div class="seg"><button class="${notifOn?"on":""}" onclick="toggleNotif()">${notifOn?"Aktif":"Mati"}</button></div></div>
+
+    <div class="srow"><span>Format jam</span><div class="seg"><button id="time12" onclick="setClockFormat(12)">12 jam</button><button id="time24" onclick="setClockFormat(24)">24 jam</button></div></div>
+    <div style="margin-top:12px;font-weight:bold">Tema tampilan</div>
+    <div class="theme-options" style="margin-top:8px">
+      <button id="theme-neon" onclick="setVisualTheme('neon')">Neon</button>
+      <button id="theme-minimal" onclick="setVisualTheme('minimal')">Minimal</button>
+      <button id="theme-amoled" onclick="setVisualTheme('amoled')">AMOLED</button>
+      <button id="theme-glass" onclick="setVisualTheme('glass')">Glass</button>
+    </div>
+    <div style="margin-top:12px;font-weight:bold">Penanda kota</div>
+    <div class="srow"><span>Label kota ini</span><select id="cityLabelSelect" onchange="saveCityLabel(this.value)" style="max-width:145px;border:0;border-radius:10px;padding:8px"><option value="">Tanpa label</option><option>Rumah</option><option>Sekolah</option><option>Kerja</option></select></div>
+
+    <div class="ds" style="margin-top:10px;line-height:1.5">Notifikasi muncul saat aplikasi dibuka. Mode Hemat mematikan animasi latar untuk menghemat baterai. Untuk dipasang seperti aplikasi, buka menu browser lalu pilih Tambahkan ke layar utama.</div>
+  </div>
+
+  <button class="bottom" onclick="changeCity()">🏙️ Ganti kota</button>
+  <button class="bottom" onclick="changeUser()">👤 Ganti pengguna</button>
+  <div class="loading" style="padding:18px;font-size:12px;opacity:.55">Data cuaca dimuat dari Open-Meteo</div>`;
+
+  sc.scrollTop=y0;
+  updateAnn();
+  renderCalendar();renderExtraWeather(h,d,i,mo,rain);updateAchievements();paintExtraSettings();loadMoonTimes();
+  applyWx(h.weather_code[i],h.cloud_cover[i],rainbow);
+  if(animateNext){animateNext=false;countUp()}
+  maybeNotify(ra);
+}
+
+/* ===== LATAR CUACA HIDUP ===== */
+function applyWx(code,cover,rainbow){
+  const d=weather.daily,now=cityNow(),m=1800000;
+  const sr=new Date(d.sunrise[0]).getTime(),ss=new Date(d.sunset[0]).getTime();
+  const phase=now<sr-m||now>ss+m?"night":now<sr+m?"dawn":now>ss-m?"dusk":"day";
+  let type="clear",rain=0;
+  if([95,96,99].includes(code)){type="storm";rain=1}
+  else if(code===82){type="rain";rain=1}
+  else if([55,57,63,65,67,81].includes(code)){type="rain";rain=.7}
+  else if([51,53,56,61,66,80].includes(code)){type="rain";rain=.35}
+  else if([71,73,75,77,85,86].includes(code))type="snow";
+  else if(code>=2)type="cloudy";
+  const S={night:["#0a1030","#1c2a5c"],dawn:["#4d5fa8","#f5b387"],dusk:["#35377f","#ee8a5e"],day:["#2f86dc","#8fd3f7"]};
+  let c=S[phase];
+  if(type==="storm")c=phase==="night"?["#0a0e1c","#1e2638"]:["#262d3d","#4d586c"];
+  else if(type!=="clear"&&phase==="day")c=["#56708a","#a9b9c7"];
+  $("wxbg").style.background="linear-gradient(180deg,"+c[0]+","+c[1]+")";
+  shareSky=c;
+  $("weather").classList.toggle("dark",phase==="night"||type==="storm");
+  setWx({phase,type,rain,cover:cover||0,rainbow:!!rainbow&&phase!=="night"});
+}
+
+let wxId=0,wxScroll=0,wxSize=null;
+addEventListener("resize",()=>{if(wxSize)wxSize()});
+$("weather").addEventListener("scroll",()=>{wxScroll=performance.now()+150},{passive:true});
+function setWx(cfg){
+  const id=++wxId,cv=$("wxcv"),ctx=cv.getContext("2d"),rnd=Math.random;
+  const size=()=>{
+    const r=Math.min(devicePixelRatio||1,1.25);
+    cv.width=innerWidth*r;cv.height=innerHeight*r;
+    ctx.setTransform(r,0,0,r,0,0);
+  };
+  size();
+  wxSize=size;
+  if(reduced()){ctx.clearRect(0,0,innerWidth,innerHeight);return}
+
+  const night=cfg.phase==="night",snow=cfg.type==="snow";
+  const stars=night&&cfg.type!=="storm"?Array.from({length:70},()=>({x:rnd(),y:rnd()*.6,r:.5+rnd()*1.2,p:rnd()*6})):[];
+  const clouds=Array.from({length:cfg.type==="clear"?3:Math.max(4,Math.round(cfg.cover/12))},()=>({x:rnd()*(innerWidth+300)-150,y:30+rnd()*innerHeight*.4,s:.6+rnd()*.9,v:6+rnd()*14}));
+  const drops=Array.from({length:snow?120:Math.round(260*cfg.rain)},()=>({x:rnd()*(innerWidth+100),y:rnd()*innerHeight,v:snow?40+rnd()*50:700+rnd()*500,l:12+rnd()*16,a:.25+rnd()*.4,r:1+rnd()*2.2,p:rnd()*6}));
+  const ccol=cfg.type==="storm"?"rgba(70,78,95,.8)":cfg.type==="rain"?"rgba(150,162,178,.7)":night?"rgba(120,135,170,.35)":"rgba(255,255,255,.7)";
+  const t0=performance.now();
+  const dew=(cfg.type==="rain"||cfg.type==="storm")?Array.from({length:16},()=>({x:rnd()*innerWidth,y:rnd()*innerHeight*.9,y0:0,r:3+rnd()*5,v:0,run:0})):[];
+  let last=performance.now(),flash=0,next=last+2500,skip=false;
+  const spl=[];
+
+  function frame(t){
+    if(id!==wxId||!$("weather").classList.contains("active"))return;
+    if(t<wxScroll){skip=!skip;if(skip){requestAnimationFrame(frame);return}}
+    const dt=Math.min((t-last)/1000,.05);
+    last=t;
+    const W=innerWidth,H=innerHeight;
+    ctx.clearRect(0,0,W,H);
+
+    ctx.fillStyle="#fff";
+    stars.forEach(s=>{
+      ctx.globalAlpha=.3+.7*Math.abs(Math.sin(t/900+s.p));
+      ctx.beginPath();ctx.arc(s.x*W,s.y*H,s.r,0,7);ctx.fill();
+    });
+    ctx.globalAlpha=1;
+
+    /* matahari / bulan */
+    const cx=W*.8,cy=cfg.phase==="day"?H*.13:night?H*.12:H*.28;
+    if(night){
+      if(cfg.type!=="storm"){
+        const g=ctx.createRadialGradient(cx,cy,10,cx,cy,120);
+        g.addColorStop(0,"rgba(246,241,213,.5)");g.addColorStop(1,"rgba(246,241,213,0)");
+        ctx.fillStyle=g;ctx.fillRect(cx-130,cy-130,260,260);
+        ctx.fillStyle="#f6f1d5";ctx.beginPath();ctx.arc(cx,cy,26,0,7);ctx.fill();
+        ctx.fillStyle="rgba(0,0,0,.08)";
+        [[-8,-6,6],[7,5,8]].forEach(k=>{ctx.beginPath();ctx.arc(cx+k[0],cy+k[1],k[2],0,7);ctx.fill()});
+      }
+    }else if(cfg.type==="clear"||cfg.type==="cloudy"){
+      const col=cfg.phase==="day"?"255,236,150":"255,190,120";
+      ctx.globalAlpha=cfg.type==="clear"?1:.55;
+      const g=ctx.createRadialGradient(cx,cy,10,cx,cy,170);
+      g.addColorStop(0,"rgba("+col+",.9)");g.addColorStop(1,"rgba("+col+",0)");
+      ctx.fillStyle=g;ctx.fillRect(cx-180,cy-180,360,360);
+      ctx.save();ctx.translate(cx,cy);ctx.rotate(t/7000);
+      ctx.strokeStyle="rgba("+col+",.4)";ctx.lineWidth=3;ctx.lineCap="round";
+      for(let i=0;i<12;i++){
+        ctx.rotate(Math.PI/6);
+        ctx.beginPath();ctx.moveTo(48,0);ctx.lineTo(70+6*Math.sin(t/600+i),0);ctx.stroke();
+      }
+      ctx.restore();
+      ctx.fillStyle="rgb("+col+")";ctx.beginPath();ctx.arc(cx,cy,36,0,7);ctx.fill();
+      ctx.globalAlpha=1;
+    }
+
+    /* pelangi setelah hujan */
+    if(cfg.rainbow){
+      ctx.globalAlpha=Math.min(1,(t-t0)/2500)*.4;
+      ctx.lineWidth=9;
+      const R=Math.min(W*.62,H*.5);
+      ["#ff5a5a","#ffa24a","#ffe14a","#5ee07a","#4ab8ff","#6a6aff","#b05aff"].forEach((c,k)=>{
+        ctx.strokeStyle=c;ctx.beginPath();ctx.arc(W*.5,H*.7,R-k*9,Math.PI,0);ctx.stroke();
+      });
+      ctx.globalAlpha=1;
+    }
+
+    /* awan */
+    ctx.fillStyle=ccol;
+    ctx.beginPath();
+    clouds.forEach(c=>{
+      c.x+=c.v*dt;
+      if(c.x>W+200)c.x=-220;
+      [[0,0,34],[34,-16,42],[74,0,34],[38,8,32]].forEach(k=>{
+        const x=c.x+k[0]*c.s,y=c.y+k[1]*c.s,r=k[2]*c.s;
+        ctx.moveTo(x+r,y);ctx.arc(x,y,r,0,7);
+      });
+    });
+    ctx.fill();
+
+    /* hujan / salju */
+    if(snow){
+      ctx.fillStyle="rgba(255,255,255,.85)";
+      ctx.beginPath();
+      drops.forEach(d=>{
+        d.y+=d.v*dt;d.x+=Math.sin(t/800+d.p)*20*dt;
+        if(d.y>H){d.y=-10;d.x=rnd()*W}
+        ctx.moveTo(d.x+d.r,d.y);ctx.arc(d.x,d.y,d.r,0,7);
+      });
+      ctx.fill();
+    }else if(drops.length){
+      ctx.lineWidth=1.4;
+      ctx.strokeStyle="rgba(200,230,255,.5)";
+      ctx.beginPath();
+      drops.forEach(d=>{
+        d.y+=d.v*dt;d.x-=d.v*dt*.18;
+        if(d.y>H){d.y=-20;d.x=rnd()*(W+100)}
+        ctx.moveTo(d.x,d.y);ctx.lineTo(d.x+d.l*.18,d.y-d.l);
+      });
+      ctx.stroke();
+    }
+
+    /* tetesan di kaca */
+    dew.forEach(d=>{
+      if(d.run>0){
+        const m=d.v*dt;d.y+=m;d.run-=m;
+        if(d.run<=0){d.v=0;d.y0=d.y}
+        ctx.strokeStyle="rgba(255,255,255,.12)";ctx.lineWidth=d.r*.6;
+        ctx.beginPath();ctx.moveTo(d.x,d.y0);ctx.lineTo(d.x,d.y);ctx.stroke();
+      }else if(rnd()<.004){d.v=50+rnd()*70;d.run=40+rnd()*120;d.y0=d.y}
+      if(d.y>H+20){d.y=-10;d.x=rnd()*W;d.run=0;d.v=0;d.y0=-10}
+      ctx.fillStyle="rgba(255,255,255,.14)";ctx.strokeStyle="rgba(255,255,255,.4)";ctx.lineWidth=1;
+      ctx.beginPath();ctx.arc(d.x,d.y,d.r,0,7);ctx.fill();ctx.stroke();
+      ctx.fillStyle="rgba(255,255,255,.6)";
+      ctx.beginPath();ctx.arc(d.x-d.r*.3,d.y-d.r*.3,d.r*.25,0,7);ctx.fill();
+    });
+
+    /* percikan hujan di permukaan air */
+    if(!snow&&drops.length&&cfg.rain>0){
+      if(spl.length<26&&rnd()<.5*cfg.rain)spl.push({x:rnd()*W,y:H*(.82+rnd()*.17),a:0});
+      ctx.lineWidth=1.2;
+      for(let q=spl.length-1;q>=0;q--){
+        const p=spl[q];p.a+=dt;
+        if(p.a>.8){spl.splice(q,1);continue}
+        const rr=4+p.a*46,al=.38*(1-p.a/.8);
+        ctx.strokeStyle="rgba(225,244,255,"+al+")";
+        ctx.beginPath();ctx.ellipse(p.x,p.y,rr,rr*.3,0,0,7);ctx.stroke();
+        ctx.strokeStyle="rgba(225,244,255,"+al*.5+")";
+        ctx.beginPath();ctx.ellipse(p.x,p.y,rr*.55,rr*.17,0,0,7);ctx.stroke();
+      }
+    }
+    /* petir */
+    if(cfg.type==="storm"){
+      if(t>next){flash=1;next=t+3000+rnd()*6000}
+      flash=Math.max(0,flash-dt*2.5);
+      if(flash>0){ctx.fillStyle="rgba(255,255,255,"+flash*.55+")";ctx.fillRect(0,0,W,H)}
+    }
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+}
+
+/* ===== KOTA FAVORIT ===== */
+const saveFavs=()=>ls.set("renFavs",JSON.stringify(favs));
+const sameLoc=f=>!!loc&&Math.abs(f.lat-loc.lat)<.01&&Math.abs(f.lon-loc.lon)<.01;
+const isFav=()=>favs.some(sameLoc);
+function persistLoc(){
+  ls.set("renLat",loc.lat);
+  ls.set("renLon",loc.lon);
+  ls.set("renCity",loc.name);
+}
+function toggleFav(){
+  if(!loc)return;
+  const k=favs.findIndex(sameLoc);
+  if(k>=0)favs.splice(k,1);
+  else{if(favs.length>=8)favs.shift();favs.push({lat:loc.lat,lon:loc.lon,name:loc.name})}
+  saveFavs();
+  addAdminLog("fav",{name:ls.get("renName")||"Tanpa nama",result:loc.name,on:k<0});
+  $("favBtn").textContent=isFav()?"★":"☆";
+  if(weather)render();
+}
+function pickFav(k,dir){
+  const f=favs[k];
+  if(!f)return;
+  loc={lat:f.lat,lon:f.lon,name:f.name};
+  weather=null;animateNext=true;
+  persistLoc();
+  const c=$("content");
+  c.classList.remove("sl","sr");
+  void c.offsetWidth;
+  if(dir)c.classList.add(dir);
+  $("weather").scrollTop=0;
+  loadWeather();
+}
+
+/* ===== MASUK KE HALAMAN CUACA ===== */
+let trBusy=false;
+const SKY={day:["#2f86dc","#8fd3f7"],dawn:["#4d5fa8","#f5b387"],dusk:["#35377f","#ee8a5e"],night:["#0a1030","#1c2a5c"]};
+function enterWeather(lat,lon,name){
+  if(trBusy)return;
+  loc={lat,lon,name};
+  weather=null;animateNext=true;
+  persistLoc();
+  if(name!=="Lokasi saya")addRecent(lat,lon,name);
+  $("weather").scrollTop=0;
+  if(reduced()){weatherReadyAt=Date.now()+900;page("city","weather");loadWeather();return}
+  weatherReadyAt=Date.now()+2800;
+  cityReveal(name);
+  loadWeather();
+}
+function cityReveal(name){
+  trBusy=true;
+  const W=innerWidth,H=innerHeight,p=curPhase||"day",c=SKY[p];
+  const box=document.querySelector("#city .box"),br=box.getBoundingClientRect();
+  const cx=br.left+br.width/2,cy=br.top+br.height/2;
+  const R=Math.max(Math.hypot(cx,cy),Math.hypot(W-cx,cy),Math.hypot(cx,H-cy),Math.hypot(W-cx,H-cy))*1.05;
+
+  const wp=$("weather"),hc=$("headerCity");
+  hc.textContent=name;hc.style.opacity=0;
+  wp.style.transition="none";wp.style.opacity=0;
+  wp.classList.add("active");
+  void wp.offsetWidth;
+  const hr=hc.getBoundingClientRect();
+
+  let deco="";
+  if(p==="night"){
+    for(let i=0;i<40;i++)deco+='<i class="star" style="left:'+Math.random()*100+'%;top:'+Math.random()*60+'%;animation-delay:-'+Math.random()*3+'s"></i>';
+    deco+='<div class="moon"></div>';
+  }else{
+    deco+='<div class="sunball-home" style="'+(p==="day"?"":"top:30%")+'"></div>';
+    [[14,.9,16,-3],[30,1.2,20,-11],[46,.8,24,-7]].forEach(k=>{
+      deco+='<div class="sc" style="top:'+k[0]+'%;--s:'+k[1]+';animation-duration:'+k[2]+'s;animation-delay:'+k[3]+'s"></div>';
+    });
+  }
+  const ov=document.createElement("div");
+  ov.id="tr";
+  ov.innerHTML='<div class="trsky" style="background:linear-gradient(180deg,'+c[0]+','+c[1]+');--cl:'+(p==="day"?"#fff":"#ffe0cc")+'">'+deco+'</div><div class="trtxt"></div>';
+  document.body.appendChild(ov);
+  const sky=ov.firstChild,tx=ov.lastChild;
+  tx.textContent=name;
+  sky.style.clipPath="circle(0px at "+cx+"px "+cy+"px)";
+  const w=tx.offsetWidth,h=tx.offsetHeight;
+
+  const ba=box.animate([{opacity:1,transform:"scale(1)"},{opacity:0,transform:"scale(.85)"}],{duration:350,fill:"forwards"});
+
+  const cc=r=>"circle("+r+"px at "+cx+"px "+cy+"px)";
+  sky.animate([
+    {clipPath:cc(8),easing:"ease-out"},
+    {clipPath:cc(34),offset:.18,easing:"cubic-bezier(.6,0,.2,1)"},
+    {clipPath:cc(R)}
+  ],{duration:1500,delay:150,fill:"both"});
+
+  const s1=Math.min(3.2,W*.8/w);
+  const T=(x,y,s)=>"translate("+x+"px,"+y+"px) scale("+s+")";
+  const txa=tx.animate([
+    {transform:T(cx-w*.15,cy-h*.15,.3),opacity:0,easing:"cubic-bezier(.2,1.4,.4,1)"},
+    {transform:T(W/2-w*s1/2,H*.42-h*s1/2,s1),opacity:1,offset:.17},
+    {transform:T(W/2-w*s1/2,H*.42-h*s1/2,s1),opacity:1,offset:.6,easing:"cubic-bezier(.65,0,.2,1)"},
+    {transform:T(hr.left,hr.top,1),opacity:1}
+  ],{duration:2300,delay:600,fill:"both"});
+
+  setTimeout(()=>{
+    wp.style.opacity="";
+    $("city").classList.remove("active");
+    ba.cancel();
+  },1700);
+
+  txa.onfinish=()=>{
+    const t0=performance.now();
+    (function wait(){
+      if(weather||performance.now()-t0>6000){
+        const f=sky.animate([{opacity:1},{opacity:0}],{duration:650,fill:"forwards"});
+        f.onfinish=()=>{hc.style.opacity="";ov.remove();wp.style.transition="";trBusy=false};
+      }else setTimeout(wait,100);
+    })();
+  };
+}
+function useGps(){
+  if(trBusy)return;
+  const err=$("cityErr");
+  if(!navigator.geolocation){err.textContent="Perangkat tidak mendukung lokasi.";return}
+  err.textContent="📍 Mengambil lokasi...";
+  navigator.geolocation.getCurrentPosition(
+    p=>{err.textContent="";addAdminLog("gps",{name:ls.get("renName")||"Tanpa nama",result:"Lokasi saya"});enterWeather(p.coords.latitude,p.coords.longitude,"Lokasi saya")},
+    ()=>{err.textContent="Izin lokasi ditolak. Cari kota secara manual."},
+    {timeout:10000,maximumAge:600000}
+  );
+}
+
+/* ===== NOTIFIKASI HUJAN ===== */
+async function toggleNotif(){
+  if(!("Notification" in window)){alert("Browser ini belum mendukung notifikasi.");return}
+  if(!notifOn){
+    const p=await Notification.requestPermission();
+    if(p!=="granted"){alert("Izin notifikasi ditolak.");return}
+    notifOn=true;
+  }else notifOn=false;
+  ls.set("renNotif",notifOn?"1":"0");
+  if(weather)render();
+}
+function maybeNotify(ra){
+  if(!notifOn||!ra||!("Notification" in window)||Notification.permission!=="granted")return;
+  const key=ra.time+"|"+new Date(cityNow()).toDateString();
+  if(ls.get("renNotifKey")===key)return;
+  ls.set("renNotifKey",key);
+  try{
+    new Notification("Ren Weather · "+loc.name,{body:ra.now?"Sedang hujan atau segera hujan. Bawa payung!":"Hujan diperkirakan sekitar jam "+ra.time+" ("+ra.p+"%). Bawa payung!"});
+  }catch(e){}
+}
+
+/* ===== BAGIKAN SEBAGAI GAMBAR ===== */
+async function shareWeather(){
+  if(!weather)return;
+  addAdminLog("share",{name:ls.get("renName")||"Tanpa nama",result:loc.name});
+  const h=weather.hourly,d=weather.daily,i=nowIndex(h.time),info=wcode(h.weather_code[i]);
+  const cv=document.createElement("canvas");
+  cv.width=1080;cv.height=1350;
+  const x=cv.getContext("2d");
+  const g=x.createLinearGradient(0,0,0,1350);
+  g.addColorStop(0,shareSky[0]);g.addColorStop(1,shareSky[1]);
+  x.fillStyle=g;x.fillRect(0,0,1080,1350);
+  x.fillStyle="#fff";x.textAlign="center";
+  x.font="bold 64px Arial";x.fillText(loc.name,540,170);
+  x.font="34px Arial";x.globalAlpha=.8;
+  x.fillText(new Date(cityNow()).toLocaleDateString("id-ID",{weekday:"long",day:"numeric",month:"long"}),540,225);
+  x.globalAlpha=1;
+  x.font="300px Arial";x.fillText(info[0],540,610);
+  x.font="bold 250px Arial";x.fillText(fT(h.temperature_2m[i]),540,890);
+  x.font="56px Arial";x.fillText(info[1],540,985);
+  x.font="40px Arial";x.globalAlpha=.85;
+  x.fillText(fT(d.temperature_2m_min[0])+" / "+fT(d.temperature_2m_max[0])+"   💧 "+(h.precipitation_probability[i]||0)+"%",540,1065);
+  x.font="32px Arial";x.globalAlpha=.6;x.fillText("Ren Weather",540,1280);
+  const blob=await new Promise(r=>cv.toBlob(r,"image/png"));
+  const safe=(loc.name||"kota").replace(/[^\w\-]+/g,"_").replace(/^_+|_+$/g,"")||"kota";
+  const file=new File([blob],"cuaca-"+safe+".png",{type:"image/png"});
+  if(navigator.canShare&&navigator.canShare({files:[file]})){
+    try{await navigator.share({files:[file],title:"Cuaca "+loc.name});return}
+    catch(e){if(e.name==="AbortError")return}
+  }
+  const a=document.createElement("a");
+  a.href=URL.createObjectURL(blob);a.download=file.name;a.click();
+  setTimeout(()=>URL.revokeObjectURL(a.href),4000);
+}
+
+/* ===== TARIK UNTUK REFRESH ===== */
+(function(){
+  const sc=$("weather"),ind=$("ptr");
+  let y0=null,dy=0;
+  sc.addEventListener("touchstart",e=>{y0=sc.scrollTop<=0?e.touches[0].clientY:null;dy=0},{passive:true});
+  sc.addEventListener("touchmove",e=>{
+    if(y0==null)return;
+    dy=e.touches[0].clientY-y0;
+    if(dy>0){
+      const p=Math.min(dy*.5,70);
+      ind.style.transition="none";
+      ind.style.transform="translate(-50%,"+(p-40)+"px) rotate("+(p*5)+"deg)";
+      ind.style.opacity=Math.min(1,p/50);
+    }
+  },{passive:true});
+  sc.addEventListener("touchend",()=>{
+    if(y0!=null&&dy>110)loadWeather();
+    ind.style.transition="";
+    ind.style.transform="translate(-50%,-60px)";
+    ind.style.opacity=0;
+    y0=null;
+  },{passive:true});
+})();
+
+/* ===== GESER ANTAR KOTA FAVORIT ===== */
+(function(){
+  const c=$("content");
+  let sx=0,sy=0,ok=false;
+  c.addEventListener("touchstart",e=>{
+    const t=e.touches[0];
+    sx=t.clientX;sy=t.clientY;
+    ok=!e.target.closest(".hwrap,.favs");
+  },{passive:true});
+  c.addEventListener("touchend",e=>{
+    if(!ok||favs.length<2)return;
+    const t=e.changedTouches[0],dx=t.clientX-sx,dy=t.clientY-sy;
+    if(Math.abs(dx)<90||Math.abs(dy)>60)return;
+    const cur=favs.findIndex(sameLoc);
+    const nx=dx<0?(cur+1)%favs.length:(cur<=0?favs.length-1:cur-1);
+    pickFav(nx,dx<0?"sl":"sr");
+  },{passive:true});
+})();
+
+/* ===== GETAR HALUS + IKON LAYAR UTAMA ===== */
+document.addEventListener("click",e=>{
+  if(e.target.closest("button,.cloud")){try{navigator.vibrate&&navigator.vibrate(8)}catch(_){}}
+});
+(function(){
+  const c=document.createElement("canvas");
+  c.width=c.height=180;
+  const x=c.getContext("2d"),g=x.createLinearGradient(0,0,180,180);
+  g.addColorStop(0,"#3a8fe0");g.addColorStop(1,"#8fd3f7");
+  x.fillStyle=g;x.fillRect(0,0,180,180);
+  x.font="110px Arial";x.textAlign="center";x.textBaseline="middle";
+  x.fillText("⛅",90,98);
+  const l=document.createElement("link");
+  l.rel="apple-touch-icon";l.href=c.toDataURL();
+  document.head.appendChild(l);
+})();
+
+/* ===== REFRESH OTOMATIS (tiap 15 menit, dan saat kembali ke aplikasi) ===== */
+setInterval(()=>{
+  if($("weather").classList.contains("active")&&!document.hidden&&weather&&!trBusy)loadWeather();
+},900000);
+document.addEventListener("visibilitychange",()=>{
+  if(!document.hidden&&weather&&$("weather").classList.contains("active")&&Date.now()-cacheTs>600000)loadWeather();
+  if(!document.hidden)syncPublicSettings();
+});
+
+/* ===== GANTI KOTA / PENGGUNA ===== */
+function changeCity(){
+  page("weather","city","fade");
+}
+function changeUser(){
+  if(!confirm("Ganti pengguna?\n\nData nama, gender, dan kota akan dihapus."))return;
+  ["renName","renGender","renLat","renLon","renCity","renFavs","renCache","renUnits","renNotif","renNotifKey","renRecent","renFx","renAnnSeen","renMsgSeen","renDash","renCmp","renAlertOn","renAlertSeen"].forEach(k=>ls.del(k));
+  location.reload();
+}
+
+/* ===== MULAI ===== */
+applyTimeTheme();
+setInterval(applyTimeTheme,300000);
+
+window.addEventListener("load",()=>{
+  const name=ls.get("renName"),g=ls.get("renGender"),saved=savedLocation();
+  const showOnly=id=>{
+    document.querySelectorAll(".page").forEach(p=>p.classList.remove("active","exit"));
+    const p=$(id);
+    p.style.transition="none";
+    p.classList.add("active");
+    void p.offsetWidth;
+    p.style.transition="";
+  };
+  if(name&&g&&saved){
+    gender=g;loc=saved;
+    showOnly("weather");
+    loadWeather();
+    return;
+  }
+  if(name&&g){
+    gender=g;
+    showOnly("city");
+    dropToCard();cityFx();
+    return;
+  }
+  intro();
+});
+
+/* ===== ADMIN & KONTROL JARAK JAUH ===== */
+/* ===== PENGATURAN FIREBASE ===== */
+const FB_DB_URL="https://cuaca-ren-b8709-default-rtdb.asia-southeast1.firebasedatabase.app";
+const FB_API_KEY="AIzaSyB8zmlLYdwTyWQ9lsigqKiUdrrWw-PAM1c";
+let adminToken="";
+let adminAllUsers=[];
+let adminAutoRefresh=false;
+let adminRefreshTimer=null;
+let adminCache={logs:[],blocked:{},notes:{}};
+const fbOn=()=>!!(FB_DB_URL&&FB_API_KEY);
+const fbUrl=()=>FB_DB_URL.replace(/\/$/,"");
+const devId=(()=>{let d=ls.get("renDev");if(!d){d=Math.random().toString(36).slice(2,8);ls.set("renDev",d)}return d})();
+
+function adminLogs(){try{return JSON.parse(localStorage.getItem("renAdminLogs")||"[]")}catch(e){return[]}}
+function saveAdminLogs(a){try{localStorage.setItem("renAdminLogs",JSON.stringify(a.slice(-500)))}catch(_){}}
+function addAdminLog(type,data){
+  const e={type:type,data:data,time:new Date().toISOString(),dev:devId};
+  try{const a=adminLogs();a.push(e);saveAdminLogs(a)}catch(_){}
+  if(fbOn()){
+    fetch(fbUrl()+"/logs.json",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(e),keepalive:true}).catch(()=>{});
+    checkBlockedStatus();
+  }
+}
+function escAdmin(v){return String(v??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]))}
+function adminHtmlArg(v){return JSON.stringify(String(v)).replace(/&/g,"&amp;").replace(/"/g,"&quot;").replace(/</g,"&lt;").replace(/>/g,"&gt;")}
+async function dbGet(path){const r=await fetch(fbUrl()+"/"+path+".json?auth="+encodeURIComponent(adminToken));if(!r.ok)throw new Error("HTTP "+r.status);return await r.json()}
+async function dbPatch(path,value){const r=await fetch(fbUrl()+"/"+path+".json?auth="+encodeURIComponent(adminToken),{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify(value)});if(!r.ok){let b="";try{b=await r.text()}catch(_){}throw new Error("HTTP "+r.status+(r.status===401||r.status===403?" (sesi admin habis atau ditolak Rules)":"")+" "+b.slice(0,120))}return r.json()}
+async function dbDelete(path){const r=await fetch(fbUrl()+"/"+path+".json?auth="+encodeURIComponent(adminToken),{method:"DELETE"});if(!r.ok)throw new Error("HTTP "+r.status)}
+function openAdmin(){$("adminOverlay").classList.add("show");if(!adminToken){$("adminLoginBox").style.display="block";$("adminPanel").style.display="none";$("adminUser").value="";$("adminPass").value="";$("adminError").textContent=""}}
+function closeAdmin(){$("adminOverlay").classList.remove("show")}
+async function adminLogin(){
+ const err=$("adminError");if(!fbOn()){err.textContent="Firebase belum diatur di file.";return}err.textContent="Memeriksa...";
+ try{const r=await fetch("https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key="+FB_API_KEY,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({email:$("adminUser").value.trim(),password:$("adminPass").value,returnSecureToken:true})});const j=await r.json();if(!r.ok||!j.idToken){const code=j?.error?.message||("HTTP_"+r.status);const hints={EMAIL_NOT_FOUND:"Email belum terdaftar di Firebase Authentication.",INVALID_PASSWORD:"Password salah untuk email tersebut.",INVALID_LOGIN_CREDENTIALS:"Email atau password salah, atau akun tidak ditemukan.",USER_DISABLED:"Akun admin dinonaktifkan di Firebase.",OPERATION_NOT_ALLOWED:"Provider Email/Password belum diaktifkan di Firebase Authentication.",TOO_MANY_ATTEMPTS_TRY_LATER:"Terlalu banyak percobaan. Tunggu sebentar lalu coba lagi.",API_KEY_INVALID:"API key Firebase tidak valid.",INVALID_EMAIL:"Format email tidak valid."};err.textContent=(hints[code]||("Login gagal: "+code))+" ("+code+")";return}
+ adminToken=j.idToken;err.textContent="";$("adminPass").value="";$("adminLoginBox").style.display="none";$("adminPanel").style.display="block";$("maint").classList.remove("show");renderAdminLogs();loadAdminSettings();
+ }catch(e){err.textContent="Gagal terhubung. Periksa internet."}}
+function adminLogout(){adminToken="";if(adminRefreshTimer){clearInterval(adminRefreshTimer);adminRefreshTimer=null}adminAutoRefresh=false;if($("adminAutoRefreshBtn"))$("adminAutoRefreshBtn").textContent="⏱️ Auto-refresh: Mati";$("adminPanel").style.display="none";$("adminLoginBox").style.display="block";$("adminUser").value="";$("adminPass").value="";applyAdminSettings(appCfg)}
+async function clearAdminLogs(){if(!confirm("Hapus SEMUA aktivitas pengguna di Firebase? Tindakan ini tidak bisa dibatalkan."))return;try{await dbDelete("logs");localStorage.removeItem("renAdminLogs");await renderAdminLogs();alert("Semua aktivitas berhasil dihapus.")}catch(e){alert("Gagal menghapus. Periksa izin Firebase.")}}
+async function pruneAdminLogs(){if(!confirm("Hapus aktivitas yang lebih lama dari 30 hari?"))return;try{const cut=Date.now()-30*864e5,logs=await loadAllAdminLogs(),patch={};let n=0;logs.forEach(x=>{if(x.time&&new Date(x.time).getTime()<cut){patch[x._key]=null;n++}});if(n)await dbPatch("logs",patch);await renderAdminLogs();alert(n+" aktivitas lama dihapus.")}catch(e){alert("Gagal menghapus. Periksa izin Firebase.")}}
+async function loadAllAdminLogs(){const o=await dbGet("logs");return Object.entries(o||{}).map(([key,value])=>({...value,_key:key})).sort((a,b)=>String(b.time).localeCompare(String(a.time)))}
+
+function adminLabel(x){
+ const d=x.data||{};
+ if(x.type==="login")return"🔐 Login";
+ if(x.type==="city")return"🌍 Mencari kota: <b>"+escAdmin(d.query)+"</b> → "+escAdmin(d.result);
+ if(x.type==="gps")return"📍 Menggunakan lokasi GPS";
+ if(x.type==="open")return"🚪 Membuka aplikasi";
+ if(x.type==="fav")return(d.on?"⭐ Menambah":"☆ Menghapus")+" favorit: <b>"+escAdmin(d.result)+"</b>";
+ if(x.type==="share")return"📤 Membagikan cuaca: <b>"+escAdmin(d.result)+"</b>";
+ return"🧭 "+escAdmin(x.type||"Aktivitas");
+}
+const dkey=t=>{const d=new Date(t);return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0")};
+function adminCount(){
+ document.querySelectorAll("#adminStats [data-an]").forEach(el=>{
+  const to=+el.dataset.an,t0=performance.now();
+  (function s(t){const p=Math.min(1,(t-t0)/700);el.textContent=Math.round(to*(1-Math.pow(1-p,3)));if(p<1)requestAnimationFrame(s)})(t0);
+ });
+}
+async function renderAdminLogs(){
+ const box=$("adminLogs");box.innerHTML='<div class="admin-user">Memuat data...</div>';
+ let logs;try{logs=await loadAllAdminLogs()}catch(e){box.innerHTML='<div class="admin-user">Gagal memuat data. Periksa koneksi dan izin Firebase.</div>';$("adminStats").textContent="Statistik tidak tersedia";return}
+ let blocked={},notes={};
+ try{blocked=await dbGet("blocked")||{}}catch(_){}
+ try{notes=await dbGet("notes")||{}}catch(_){}
+ adminCache={logs,blocked,notes};
+ paintAdmin();
+}
+function paintAdmin(){
+ const logs=adminCache.logs,blocked=adminCache.blocked,notes=adminCache.notes,box=$("adminLogs"),now=Date.now();
+ const users={},cities={};
+ logs.forEach(x=>{
+  const id=x.dev||"tanpa-id",name=(x.data&&x.data.name)||"Tanpa nama";
+  if(!users[id])users[id]={id,name,logs:[],gender:"-"};
+  users[id].logs.push(x);
+  if(x.type==="login"&&x.data&&x.data.gender)users[id].gender=x.data.gender;
+  if(x.time&&(!users[id].last||x.time>users[id].last))users[id].last=x.time;
+  if(x.type==="city"&&x.data){const c=x.data.result||x.data.query;if(c)cities[c]=(cities[c]||0)+1}
+ });
+ const list=Object.values(users);
+ const sv=$("adminSort")?$("adminSort").value:"recent";
+ list.sort(sv==="active"?(a,b)=>b.logs.length-a.logs.length:sv==="name"?(a,b)=>String(a.name).localeCompare(String(b.name),"id"):(a,b)=>String(b.last||"").localeCompare(String(a.last||"")));
+ adminAllUsers=list;
+
+ const todayKey=dkey(now);
+ const onlineN=list.filter(u=>u.last&&now-new Date(u.last).getTime()<9e5).length;
+ const blockedN=list.filter(u=>blocked[u.id]===true).length;
+ const kp=(n,l)=>'<div class="kpi"><b data-an="'+n+'">0</b><span>'+l+'</span></div>';
+ const days=[];
+ for(let k=6;k>=0;k--){const d=new Date();d.setDate(d.getDate()-k);days.push({key:dkey(d),lab:d.toLocaleDateString("id-ID",{weekday:"short"}),n:0})}
+ logs.forEach(x=>{if(!x.time)return;const k=dkey(x.time),f=days.find(d=>d.key===k);if(f)f.n++});
+ const mxD=Math.max(1,...days.map(d=>d.n));
+ const bars='<div class="bars">'+days.map((d,k)=>'<div class="bcol"><span>'+d.n+'</span><i style="height:'+Math.max(3,d.n/mxD*100)+'%;--k:'+k+'"></i><small>'+escAdmin(d.lab)+'</small></div>').join("")+'</div>';
+ const hours=Array.from({length:24},(_,h)=>({h,n:0}));
+ logs.forEach(x=>{if(x.time){const dt=new Date(x.time);hours[dt.getHours()].n++}});
+ const mxH=Math.max(1,...hours.map(x=>x.n));
+ const hourBars='<div class="bars">'+hours.map((x,k)=>'<div class="bcol"><span>'+x.n+'</span><i style="height:'+Math.max(3,x.n/mxH*100)+'%;--k:'+k+'"></i><small>'+String(x.h).padStart(2,"0")+'</small></div>').join("")+'</div>';
+ const topC=Object.entries(cities).sort((a,b)=>b[1]-a[1]).slice(0,5);
+ const mxC=Math.max(1,...topC.map(c=>c[1]));
+ const cityHtml=topC.length?topC.map((c,k)=>'<div class="hrow"><span>'+escAdmin(c[0])+'</span><div class="hb"><i style="--w:'+(c[1]/mxC*100)+'%;--k:'+k+'"></i></div><b>'+c[1]+'</b></div>').join(""):'<div class="admin-note">Belum ada pencarian kota.</div>';
+ const gL=list.filter(u=>u.gender==="Laki-laki").length,gP=list.filter(u=>u.gender==="Perempuan").length,gT=Math.max(1,list.length);
+ const genHtml='<div class="hrow"><span>👦 Laki-laki</span><div class="hb"><i style="--w:'+(gL/gT*100)+'%;--k:0"></i></div><b>'+gL+'</b></div><div class="hrow"><span>👧 Perempuan</span><div class="hb"><i style="--w:'+(gP/gT*100)+'%;--k:1"></i></div><b>'+gP+'</b></div>';
+ $("adminStats").innerHTML='<b>📊 Statistik pengguna</b><div class="kpis">'+kp(list.length,"Pengguna")+kp(logs.length,"Aktivitas")+kp(logs.filter(x=>x.time&&dkey(x.time)===todayKey).length,"Hari ini")+kp(onlineN,"Aktif 15 mnt")+'</div><div class="admin-note" style="margin-top:8px">Diblokir: <b>'+blockedN+'</b> perangkat</div><div class="cap" style="margin-left:0">Aktivitas 7 hari terakhir</div>'+bars+'<div class="cap" style="margin-left:0">Jam ramai dalam sehari</div>'+hourBars+'<div class="cap" style="margin-left:0">Kota terpopuler</div>'+cityHtml+'<div class="cap" style="margin-left:0">Gender</div>'+genHtml;
+ adminCount();
+
+ if(!list.length){box.innerHTML='<div class="admin-user">Belum ada aktivitas pengguna.</div>';filterAdminLogs();return}
+ box.innerHTML=list.map((u,idx)=>{
+  const arr=u.logs,bl=blocked[u.id]===true,on=u.last&&now-new Date(u.last).getTime()<9e5,note=notes[u.id];
+  const acts=arr.map(x=>{const t=x.time?new Date(x.time).toLocaleString("id-ID",{dateStyle:"medium",timeStyle:"short"}):"Waktu tidak diketahui";return '<div class="admin-activity">'+adminLabel(x)+'<br><small>'+escAdmin(t)+'</small></div>'}).join("");
+  return '<div class="admin-user ucard" style="--k:'+Math.min(idx,12)+'"><div class="admin-user-head">👤 '+escAdmin(u.name)+(on?'<span class="dot"></span>':'')+(bl?'<span class="tag">diblokir</span>':'')+'</div><div class="admin-user-meta">Gender: '+escAdmin(u.gender)+' · '+arr.length+' aktivitas · ID perangkat: '+escAdmin(u.id)+'<br>Terakhir aktif: '+escAdmin(u.last?new Date(u.last).toLocaleString("id-ID"):"-")+'</div>'+(note?'<div class="unote">📝 '+escAdmin(note)+'</div>':'')+'<div class="admin-actions"><button class="admin-btn" onclick="adminRenameUser('+adminHtmlArg(u.id)+','+adminHtmlArg(u.name)+')">✏️ Edit nama</button><button class="admin-btn '+(bl?'':'admin-danger')+'" onclick="adminToggleBlock('+adminHtmlArg(u.id)+','+(!bl)+')">'+(bl?'🔓 Buka blokir':'🚫 Blokir')+'</button><button class="admin-btn" onclick="adminMessageUser('+adminHtmlArg(u.id)+','+adminHtmlArg(u.name)+')">💬 Kirim pesan</button><button class="admin-btn" onclick="adminNote('+adminHtmlArg(u.id)+','+adminHtmlArg(u.name)+')">📝 Catatan</button><button class="admin-btn" onclick="adminToggleDetails('+adminHtmlArg(u.id)+')">🔎 Detail aktivitas</button><button class="admin-btn admin-danger" onclick="adminDeleteUser('+adminHtmlArg(u.id)+')">🗑️ Hapus pengguna</button></div><div id="details-'+escAdmin(u.id)+'" style="display:none">'+acts+'</div></div>';
+ }).join("");
+ filterAdminLogs();
+}
+function filterAdminLogs(){
+ const q=String($("adminSearch")?.value||"").trim().toLocaleLowerCase("id-ID");
+ const type=String($("adminTypeFilter")?.value||"all");
+ let visible=0;
+ document.querySelectorAll("#adminLogs .ucard").forEach(card=>{
+   const text=(card.textContent||"").toLocaleLowerCase("id-ID");
+   const activityTypes=Array.from(card.querySelectorAll(".admin-activity")).map(a=>a.textContent||"");
+   const matchesText=!q||text.includes(q);
+   const matchesType=type==="all"||activityTypes.some(a=>type==="other"?!/Login|Mencari kota|lokasi GPS/i.test(a):type==="login"?/Login/i.test(a):type==="city"?/Mencari kota/i.test(a):/lokasi GPS/i.test(a));
+   const show=matchesText&&matchesType;
+   card.style.display=show?"":"none";
+   if(show)visible++;
+ });
+ const count=$("adminFilterCount");
+ if(count)count.textContent="Menampilkan "+visible+" dari "+adminAllUsers.length+" perangkat"+(q||type!=="all"?" (filter aktif)":"");
+}
+function resetAdminFilters(){if($("adminSearch"))$("adminSearch").value="";if($("adminTypeFilter"))$("adminTypeFilter").value="all";filterAdminLogs()}
+function toggleAdminAutoRefresh(){
+ adminAutoRefresh=!adminAutoRefresh;
+ const btn=$("adminAutoRefreshBtn");
+ if(btn)btn.textContent="⏱️ Auto-refresh: "+(adminAutoRefresh?"Aktif":"Mati");
+ if(adminRefreshTimer){clearInterval(adminRefreshTimer);adminRefreshTimer=null}
+ if(adminAutoRefresh)adminRefreshTimer=setInterval(()=>{if(adminToken&&$("adminPanel")?.style.display!=="none")renderAdminLogs()},30000);
+}
+function adminToggleDetails(id){
+ const el=$("details-"+String(id));
+ if(!el){alert("Detail aktivitas tidak ditemukan. Coba refresh data admin.");return}
+ const isHidden=getComputedStyle(el).display==="none";
+ el.style.display=isHidden?"block":"none";
+}
+async function adminRenameUser(id,oldName){
+ const name=prompt("Nama baru untuk pengguna "+oldName+":",oldName);
+ if(name===null)return;
+ if(!name.trim()){alert("Nama tidak boleh kosong.");return}
+ try{
+  const logs=await loadAllAdminLogs(),patch={};
+  logs.filter(x=>String(x.dev||"tanpa-id")===String(id)).forEach(x=>{patch[x._key+"/data/name"]=name.trim()});
+  await dbPatch("logs",patch);
+  await renderAdminLogs();
+  alert("Nama pengguna diperbarui pada aktivitas yang tersimpan.");
+ }catch(e){alert("Gagal mengubah nama. Periksa izin Firebase.")}
+}
+async function adminDeleteUser(id){
+ if(!confirm("Hapus semua aktivitas untuk perangkat "+id+"?"))return;
+ try{
+  const logs=await loadAllAdminLogs(),patch={};
+  logs.filter(x=>String(x.dev||"tanpa-id")===String(id)).forEach(x=>{patch[x._key]=null});
+  await dbPatch("logs",patch);
+  await renderAdminLogs();
+  alert("Data aktivitas pengguna dihapus.");
+ }catch(e){alert("Gagal menghapus data. Periksa izin Firebase.")}
+}
+async function adminToggleBlock(id,shouldBlock){
+ let reason="";
+ if(shouldBlock){const r=prompt("Alasan blokir (opsional, akan terlihat oleh pengguna):","");if(r===null)return;reason=r.trim().slice(0,160)}
+ else if(!confirm("Buka blokir perangkat "+id+"?"))return;
+ try{
+  await dbPatch("blocked",{[id]:shouldBlock?true:null});
+  try{await dbPatch("blockReason",{[id]:shouldBlock&&reason?reason:null})}catch(_){}
+  await renderAdminLogs();
+  alert(shouldBlock?"Perangkat ditandai diblokir.":"Blokir perangkat dihapus.");
+ }catch(e){alert("Gagal mengubah status blokir: "+e.message)}
+}
+async function adminMessageUser(id,name){
+ const t=prompt("Pesan untuk "+name+" (kosongkan untuk menghapus pesan lama):","");
+ if(t===null)return;
+ try{
+  if(t.trim())await dbPatch("msgs",{[id]:{text:t.trim().slice(0,240),at:Date.now()}});
+  else await dbPatch("msgs",{[id]:null});
+  alert(t.trim()?"Pesan terkirim. Pengguna melihatnya saat membuka aplikasi.":"Pesan dihapus.");
+ }catch(e){alert("Gagal mengirim pesan: "+e.message)}
+}
+async function adminNote(id,name){
+ const old=(adminCache.notes||{})[id]||"";
+ const t=prompt("Catatan admin untuk "+name+" (hanya terlihat admin):",old);
+ if(t===null)return;
+ try{
+  await dbPatch("notes",{[id]:t.trim()||null});
+  if(t.trim())adminCache.notes[id]=t.trim();else delete adminCache.notes[id];
+  paintAdmin();
+ }catch(e){alert("Gagal menyimpan catatan: "+e.message)}
+}
+function exportAdminData(format){loadAllAdminLogs().then(logs=>{const users={};logs.forEach(x=>{const id=x.dev||"tanpa-id";if(!users[id])users[id]={device:id,name:(x.data&&x.data.name)||"Tanpa nama",activities:[]};users[id].activities.push(x)});const payload={exportedAt:new Date().toISOString(),stats:{users:Object.keys(users).length,activities:logs.length},users:Object.values(users),logs};let content,type,ext;if(format==="csv"){const rows=[["waktu","perangkat","nama","jenis","detail"],...logs.map(x=>[x.time,x.dev,(x.data||{}).name,x.type,JSON.stringify(x.data||{})])];content=rows.map(row=>row.map(v=>'"'+String(v??"").replace(/"/g,'""')+'"').join(",")).join("\r\n");type="text/csv;charset=utf-8";ext="csv"}else{content=JSON.stringify(payload,null,2);type="application/json;charset=utf-8";ext="json"}const blob=new Blob(["\ufeff",content],{type}),url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download="ren-weather-pengguna-"+new Date().toISOString().slice(0,10)+"."+ext;a.click();setTimeout(()=>URL.revokeObjectURL(url),2000)}).catch(()=>alert("Gagal mengekspor data."))}
+
+/* ===== KONTROL APLIKASI (berlaku ke semua pengguna) ===== */
+function openAdminSettings(){const s=$("adminSettings");s.style.display="block";s.style.animation="none";void s.offsetWidth;s.style.animation="fadeUp .4s both"}
+async function loadAdminSettings(){
+ try{
+  const s=await dbGet("settings");
+  if(s){
+   $("adminAppTitle").value=s.title||"Ren Weather";
+   $("adminTheme").value=s.theme||"blue";
+   $("adminAnnounce").value=s.announce||"";
+   $("adminMaint").checked=!!s.maint;
+   $("adminMaintMsg").value=s.maintMsg||"";$("adminBannedWords").value=(s.bannedWords||[]).join(", ");
+   const f=s.features||{};
+   $("ftFav").checked=f.fav!==false;$("ftShare").checked=f.share!==false;$("ftGps").checked=f.gps!==false;$("ftNotif").checked=f.notif!==false;$("ftBest").checked=f.best!==false;
+   appCfg=s;
+  }
+ }catch(_){}
+}
+async function saveAdminSettings(){
+ const ann=$("adminAnnounce").value.trim();
+ const s={
+  title:$("adminAppTitle").value.trim()||"Ren Weather",
+  theme:$("adminTheme").value,
+  announce:ann,
+  announceAt:ann===(appCfg.announce||"")?(appCfg.announceAt||0):Date.now(),
+  maint:$("adminMaint").checked,
+  maintMsg:$("adminMaintMsg").value.trim(),
+  bannedWords:$("adminBannedWords").value.split(",").map(x=>x.trim().toLocaleLowerCase("id-ID")).filter(Boolean),
+  features:{fav:$("ftFav").checked,share:$("ftShare").checked,gps:$("ftGps").checked,notif:$("ftNotif").checked,best:$("ftBest").checked},
+  updatedAt:new Date().toISOString()
+ };
+ try{await dbPatch("settings",s);applyAdminSettings(s);alert("Pengaturan disimpan dan berlaku untuk semua pengguna.")}
+ catch(e){applyAdminSettings(s);alert("Diterapkan di perangkat ini, tetapi gagal menyimpan ke Firebase. Periksa izin database.")}
+}
+function applyAdminSettings(s){
+ s=s||{};appCfg=s;ls.set("renBannedWords",(s.bannedWords||[]).join(","));
+ const themes={blue:["#67cef8","#eafaff","#3eb8eb"],purple:["#b8a0ff","#f6edff","#8656df"],green:["#76dfbb","#e9fff4","#21a77a"],dark:["#17233e","#263b60","#376bb6"]};
+ const c=themes[s.theme]||themes.blue;
+ document.body.style.setProperty("--sk1",c[0]);document.body.style.setProperty("--sk2",c[1]);
+ document.documentElement.style.setProperty("--rw-accent",c[2]);
+ document.title=s.title||"Ren Weather";
+ const styleId="renAdminThemeStyle";let st=$(styleId);
+ if(!st){st=document.createElement("style");st.id=styleId;document.head.appendChild(st)}
+ st.textContent='.lbtn,.main,.search,.gender button.selected{background:var(--rw-accent)!important}';
+ try{localStorage.setItem("renWeatherAdminSettings",JSON.stringify(s))}catch(_){}
+ const f=Object.assign({fav:true,share:true,gps:true,notif:true,best:true},s.features||{});
+ const B=document.body.classList;
+ B.toggle("nofav",f.fav===false);B.toggle("noshare",f.share===false);B.toggle("nogps",f.gps===false);B.toggle("nonotif",f.notif===false);B.toggle("nobest",f.best===false);
+ $("maintTxt").textContent=s.maintMsg||"Ren Weather sedang dirawat sebentar. Silakan kembali lagi nanti.";
+ $("maint").classList.toggle("show",!!s.maint&&!adminToken);
+ updateAnn();
+}
+
+/* ===== BLOKIR & SINKRONISASI DARI ADMIN ===== */
+async function showBlockedNotice(){
+ if($("renBlockedNotice"))return;
+ const d=document.createElement("div");
+ d.id="renBlockedNotice";
+ d.style.cssText="position:fixed;inset:0;z-index:1000000;background:#111827;color:white;display:flex;align-items:center;justify-content:center;text-align:center;padding:28px;font:16px Arial;animation:fadeIn .5s";
+ d.innerHTML="<div><div style='font-size:54px'>🚫</div><h2 style='margin-top:10px'>Akses dibatasi</h2><p style='margin-top:12px'>Perangkat ini ditandai diblokir oleh administrator Ren Weather.</p><p id='renBlockReasonTxt' style='margin-top:10px;opacity:.75'></p></div>";
+ document.body.appendChild(d);
+ try{const r=await fetch(fbUrl()+"/blockReason/"+encodeURIComponent(devId)+".json");if(r.ok){const t=await r.json();if(t&&typeof t==="string"){const el=$("renBlockReasonTxt");if(el)el.textContent="Alasan: "+t}}}catch(_){}
+}
+async function checkBlockedStatus(){
+ if(!fbOn())return;
+ try{
+  const r=await fetch(fbUrl()+"/blocked/"+encodeURIComponent(devId)+".json");
+  if(!r.ok)return;
+  const b=await r.json();
+  if(b===true)showBlockedNotice();
+  else{const n=$("renBlockedNotice");if(n)n.remove()}
+ }catch(_){}
+}
+async function syncPublicSettings(){
+ if(!fbOn())return;
+ try{const r=await fetch(fbUrl()+"/settings.json");if(r.ok){const s=await r.json();if(s)applyAdminSettings(s)}}catch(_){}
+ try{const r=await fetch(fbUrl()+"/msgs/"+encodeURIComponent(devId)+".json");if(r.ok){userMsg=await r.json();updateAnn()}}catch(_){}
+}
+
+window.addEventListener("load",()=>{
+  try{const saved=JSON.parse(localStorage.getItem("renWeatherAdminSettings")||"null");if(saved)applyAdminSettings(saved)}catch(_){}
+  checkBlockedStatus();syncPublicSettings();
+  setInterval(checkBlockedStatus,20000);
+  setInterval(syncPublicSettings,60000);
+  const nm=ls.get("renName");
+  if(nm)addAdminLog("open",{name:nm});
+  /* Shortcut tersembunyi: tekan teks Ren Weather di awan 5x (atau ikon di layar pemeliharaan) */
+  const bind=(el,stop)=>{
+    if(!el)return;
+    let n=0,timer;
+    el.addEventListener("click",e=>{
+      if(stop)e.stopPropagation();
+      n++;
+      clearTimeout(timer);timer=setTimeout(()=>n=0,1700);
+      if(n>=5){n=0;openAdmin()}
+    });
+  };
+  bind($("lcloud")?.querySelector(".ltxt"),true);
+  bind($("maintIco"),false);
+  $("adminOverlay").addEventListener("click",e=>{
+    if(e.target.id==="adminOverlay")closeAdmin();
+  });
+  $("adminPass").addEventListener("keydown",e=>{
+    if(e.key==="Enter")adminLogin();
+  });
+});
+
+
+async function exportWeeklyReport(){
+ try{
+  const logs=await loadAllAdminLogs(),cut=Date.now()-7*86400000,weekly=logs.filter(x=>x.time&&new Date(x.time).getTime()>=cut);
+  const counts=Array.from({length:24},(_,h)=>({jam:String(h).padStart(2,"0")+":00",aktivitas:0}));
+  weekly.forEach(x=>{if(x.time)counts[new Date(x.time).getHours()].aktivitas++});
+  const rows=[["Laporan Ren Weather 7 hari terakhir"],["Dibuat",new Date().toLocaleString("id-ID")],["Total aktivitas",weekly.length],[],["Jam","Aktivitas"],...counts.map(x=>[x.jam,x.aktivitas]),[],["Waktu","Perangkat","Nama","Jenis","Detail"],...weekly.map(x=>[x.time,x.dev,(x.data||{}).name,x.type,JSON.stringify(x.data||{})])];
+  const csv=rows.map(r=>r.map(v=>'"'+String(v??"").replace(/"/g,'""')+'"').join(",")).join("\r\n");
+  const blob=new Blob(["\ufeff",csv],{type:"text/csv;charset=utf-8"}),url=URL.createObjectURL(blob),a=document.createElement("a");
+  a.href=url;a.download="ren-weather-laporan-mingguan-"+new Date().toISOString().slice(0,10)+".csv";a.click();setTimeout(()=>URL.revokeObjectURL(url),2000);
+ }catch(e){alert("Gagal membuat laporan mingguan.")}
+}
+
+/* ===== FITUR TAMBAHAN REN WEATHER ===== */
+let calendarOffset=0,clockFormat=+(ls.get("renClockFormat")||24),eggCount=0,eggTimer=null;
+function fmtClock(v){
+ if(!v)return "—";
+ const d=new Date(v);
+ if(!Number.isFinite(d.getTime()))return String(v);
+ return d.toLocaleTimeString("id-ID",{hour:"2-digit",minute:"2-digit",hour12:clockFormat===12});
+}
+function setClockFormat(n){clockFormat=n;ls.set("renClockFormat",String(n));render();paintExtraSettings()}
+function paintExtraSettings(){
+ ["time12","time24"].forEach((id,k)=>{const el=$(id);if(el)el.classList.toggle("on",clockFormat===(k?24:12))});
+ const theme=ls.get("renVisualTheme")||"glass";
+ ["neon","minimal","amoled","glass"].forEach(t=>{const el=$("theme-"+t);if(el)el.classList.toggle("on",theme===t)});
+ if($("cityLabelSelect")&&loc)$("cityLabelSelect").value=ls.get("renLabel:"+ck(loc))||"";
+}
+function setVisualTheme(t){
+ ls.set("renVisualTheme",t);
+ const w=$("weather");w.classList.remove("theme-neon","theme-minimal","theme-amoled","theme-glass");w.classList.add("theme-"+t);
+ paintExtraSettings();
+}
+function saveCityLabel(v){if(loc)ls.set("renLabel:"+ck(loc),v);const el=$("headerCity");if(el)el.textContent=(v?v+" · ":"")+(loc?.name||"");}
+function continueGuest(){
+ ls.set("renGuest","1");ls.set("renName","Tamu");ls.set("renGender","");gender="";
+ addAdminLog("guest",{name:"Tamu",mode:"guest"});
+ page("login","city","fade");
+}
+function renderCalendar(){
+ const el=$("weatherCalendar"),lab=$("calMonthLabel");if(!el||!weather)return;
+ const now=new Date(cityNow()),base=new Date(now.getFullYear(),now.getMonth()+calendarOffset,1);
+ lab.textContent=base.toLocaleDateString("id-ID",{month:"long",year:"numeric"});
+ const start=base.getDay(),days=new Date(base.getFullYear(),base.getMonth()+1,0).getDate();
+ const headers=["Min","Sen","Sel","Rab","Kam","Jum","Sab"];
+ let html=headers.map(x=>'<span class="weekday">'+x+'</span>').join("");
+ for(let j=0;j<start;j++)html+='<button disabled>·</button>';
+ for(let day=1;day<=days;day++){
+   const key=base.getFullYear()+"-"+String(base.getMonth()+1).padStart(2,"0")+"-"+String(day).padStart(2,"0");
+   const idx=weather.daily.time.indexOf(key),rainy=idx>=0&&(weather.daily.precipitation_probability_max[idx]||0)>=50;
+   const isToday=key===now.getFullYear()+"-"+String(now.getMonth()+1).padStart(2,"0")+"-"+String(now.getDate()).padStart(2,"0");
+   html+='<button class="'+(isToday?"today ":"")+(rainy?"rain-day":"")+'" '+(idx<0?'disabled':'')+' title="'+(idx>=0?(wcode(weather.daily.weather_code[idx])[1]+", peluang hujan "+(weather.daily.precipitation_probability_max[idx]||0)+"%"):"Prakiraan tidak tersedia")+'">'+day+(rainy?" ·":"")+'</button>';
+ }
+ el.innerHTML=html;
+}
+function moveCalendar(n){calendarOffset=Math.max(-1,Math.min(1,calendarOffset+n));renderCalendar()}
+function countdown(target){
+ if(!target)return "—";
+ let t=new Date(target).getTime(),now=cityNow();
+ if(t<now)t+=86400000;
+ const m=Math.max(0,Math.round((t-now)/60000));
+ return m<60?m+" menit lagi":Math.floor(m/60)+" jam "+(m%60)+" menit";
+}
+function renderExtraWeather(h,d,i,mo,rain){
+ const nextRise=d.sunrise?.[0],nextSet=d.sunset?.[0];
+ if($("sunriseCountdown"))$("sunriseCountdown").textContent=countdown(nextRise);
+ if($("sunsetCountdown"))$("sunsetCountdown").textContent=countdown(nextSet);
+ let clear=-1;
+ for(let k=i;k<Math.min(i+24,h.time.length);k++){if((h.precipitation_probability[k]||0)<20&&(h.precipitation[k]||0)<0.1){clear=k;break}}
+ if($("rainCountdown"))$("rainCountdown").textContent=rain<20?"Tidak diperkirakan hujan":clear>=0?countdown(h.time[clear]):"Belum terlihat reda";
+ const heat=h.apparent_temperature[i],rh=h.relative_humidity_2m[i];
+ const dew=heat-((100-rh)/5);
+ let flood="Rendah",prec=0;
+ for(let k=i;k<Math.min(i+6,h.time.length);k++)prec+=Number(h.precipitation[k]||0);
+ if(prec>=50)flood="Sangat tinggi";else if(prec>=25)flood="Tinggi";else if(prec>=10)flood="Waspada";
+ if($("hourlyRisk")){
+   let html='<div class="feature-line"><span>🌡️ Indeks panas (terasa)</span><b>'+fT(heat)+'</b></div><div class="feature-line"><span>💧 Titik embun (perkiraan)</span><b>'+Math.round(dew)+'°C</b></div><div class="feature-line"><span>🌊 Risiko genangan/banjir 6 jam</span><b>'+flood+'</b></div><div class="guest-note">Estimasi risiko berbasis akumulasi hujan prakiraan, bukan peringatan resmi banjir.</div>';
+   html+='<div style="margin-top:10px;font-weight:bold">Prakiraan 6 jam berikutnya</div>';
+   for(let k=i;k<Math.min(i+6,h.time.length);k++)html+='<div class="feature-line"><span>'+fmtClock(h.time[k])+' · '+wcode(h.weather_code[k])[0]+'</span><b>'+fT(h.temperature_2m[k])+' · '+(h.precipitation_probability[k]||0)+'% hujan</b></div>';
+   $("hourlyRisk").innerHTML=html;
+ }
+ const tomorrowIdx=Math.min(i+24,h.time.length-1),tRain=h.precipitation_probability[tomorrowIdx]||0,tTemp=h.temperature_2m[tomorrowIdx];
+ if($("autoSummary"))$("autoSummary").innerHTML='<b>Besok cocok naik motor?</b><p style="margin-top:8px;line-height:1.5">'+(tRain>=50?"Kurang disarankan tanpa jas hujan karena peluang hujan sekitar "+tRain+"%.":tRain>=25?"Bisa, tetapi siapkan jas hujan karena peluang hujan "+tRain+"%.":"Cukup cocok berdasarkan prakiraan hujan ("+tRain+"%).")+' Suhu sekitar '+fT(tTemp)+'.</p><div class="guest-note">Ringkasan dibuat otomatis dari prakiraan, bukan jaminan kondisi jalan.</div>';
+}
+function updateAchievements(){
+ const today=new Date().toISOString().slice(0,10),last=ls.get("renStreakDate"),prevDate=new Date();prevDate.setDate(prevDate.getDate()-1);
+ let streak=+(ls.get("renStreak")||0);
+ if(last!==today){if(last===prevDate.toISOString().slice(0,10))streak++;else streak=1;ls.set("renStreak",String(streak));ls.set("renStreakDate",today)}
+ const cities=JSON.parse(ls.get("renVisitedCities")||"[]");
+ if(loc&&!cities.includes(loc.name)){cities.push(loc.name);ls.set("renVisitedCities",JSON.stringify(cities))}
+ const achievements=[["🌦️","Pemburu hujan",weather&&weather.hourly.precipitation_probability.some(x=>x>=60)],["🧭","Penjelajah 5 kota",cities.length>=5],["🔥","Streak 3 hari",streak>=3],["🌙","Pengamat langit",true]];
+ if($("streakDisplay"))$("streakDisplay").innerHTML='<b>🔥 Streak harian: '+streak+' hari</b><div class="guest-note">Membuka Ren Weather setiap hari akan menjaga streak.</div>';
+ if($("achievementList"))$("achievementList").innerHTML=achievements.map(a=>'<span class="badge-pill '+(a[2]?"unlocked":"")+'">'+a[0]+' '+a[1]+(a[2]?" ✓":" 🔒")+'</span>').join("");
+}
+function tapSunEgg(){
+ eggCount++;clearTimeout(eggTimer);eggTimer=setTimeout(()=>eggCount=0,2500);
+ if(eggCount>=5){eggCount=0;$("eggMessage").textContent="✨ Easter egg terbuka! Kamu menemukan matahari rahasia Ren Weather.";ls.set("renEggUnlocked","1")}
+ else $("eggMessage").textContent="Matahari: "+eggCount+"/5 ketukan";
+}
+async function loadMoonTimes(){
+ if(!loc)return;
+ try{
+  const date=new Date(cityNow()).toISOString().slice(0,10);
+  const r=await fetch("https://api.sunrise-sunset.org/json?lat="+loc.lat+"&lng="+loc.lon+"&date="+date+"&formatted=0");
+  const j=await r.json();if(j.status!=="OK")throw 0;
+  const rise=new Date(j.results.moonrise),set=new Date(j.results.moonset);
+  $("moonriseValue").textContent=fmtClock(rise);
+  $("moonsetValue").textContent=fmtClock(set);
+ }catch(_){if($("moonriseValue"))$("moonriseValue").textContent="Tidak tersedia";if($("moonsetValue"))$("moonsetValue").textContent="Tidak tersedia"}
+}
+
+
+
+/* ===== WATER GLASS v4: memantul seperti air, halus & pelan ===== */
+(function(){
+  /* semua tombol / elemen yang bisa dipencet */
+  const BTN="button,[onclick]";
+  /* bagian di dalam kartu kaca yang memantul sendiri */
+  const ITEM=".hour,.detail,.frow,.rb,.feature-line,.poll>div,.lifegrid>div,.outfit>div,.sunrow>div,.moonrow,.srow,.icon,.temp,.arc";
+  /* elemen lepas di luar kartu kaca (halaman awal, login, kota, header, judul, dll) */
+  const LOOSE=".cloud,.ltxt,.sunball-home,.logo,.city-icon,.city-title,h1,.sub,.rcap,.err,.ds,.cap,.favs,.greet,.alert,.ann,.title,.cityname,.loading,.mtico,#maint h2,#maint p,.admin-box h2,.admin-sub,.admin-user,.kpi";
+  const SKIP="input,textarea,select";
+  const cv=document.createElement("canvas");cv.id="wgfx";document.body.appendChild(cv);
+  const ctx=cv.getContext("2d");let dpr=1;
+  const fit=()=>{dpr=Math.min(devicePixelRatio||1,2);cv.width=Math.round(innerWidth*dpr);cv.height=Math.round(innerHeight*dpr)};
+  fit();addEventListener("resize",fit);
+  const off=()=>(typeof reduced==="function"&&reduced());
+
+  /* ---------- pegas lambat (spring) ----------
+     Redaman rendah + frekuensi rendah = pantulan yang lembut, ~3 kali goyang lalu tenang. */
+  const S=new Map();
+  const CFG={
+    item:{k:62,c:4.1,kr:46,cr:3.4,kt:50,ct:4.2},
+    card:{k:38,c:3.3,kr:28,cr:2.8,kt:34,ct:3.6}
+  };
+  const sp=(el,card)=>{
+    let s=S.get(el);
+    if(!s){
+      s={el,cfg:card?CFG.card:CFG.item,sx:1,sy:1,vx:0,vy:0,r:0,vr:0,ty:0,vty:0,tsx:1,tsy:1,tr:0,tty:0,noT:el.classList.contains("box")};
+      S.set(el,s);
+    }
+    return s;
+  };
+  function stepSprings(dt){
+    const n=Math.max(1,Math.ceil(dt/.004)),h=dt/n;
+    S.forEach((s,el)=>{
+      const q=s.cfg;
+      for(let i=0;i<n;i++){
+        s.vx+=((s.tsx-s.sx)*q.k-s.vx*q.c)*h;s.sx+=s.vx*h;
+        s.vy+=((s.tsy-s.sy)*q.k-s.vy*q.c)*h;s.sy+=s.vy*h;
+        s.vr+=((s.tr-s.r)*q.kr-s.vr*q.cr)*h;s.r+=s.vr*h;
+        s.vty+=((s.tty-s.ty)*q.kt-s.vty*q.ct)*h;s.ty+=s.vty*h;
+      }
+      if(!el.isConnected){S.delete(el);return}
+      el.style.scale=s.sx.toFixed(4)+" "+s.sy.toFixed(4);
+      el.style.rotate=s.r.toFixed(3)+"deg";
+      if(!s.noT)el.style.translate="0px "+s.ty.toFixed(2)+"px";
+      const rest=Math.abs(s.sx-s.tsx)<.0006&&Math.abs(s.sy-s.tsy)<.0006&&Math.abs(s.vx)<.006&&Math.abs(s.vy)<.006&&
+        Math.abs(s.r-s.tr)<.01&&Math.abs(s.vr)<.04&&Math.abs(s.ty-s.tty)<.05&&Math.abs(s.vty)<.2;
+      if(rest&&s.tsx===1&&s.tsy===1&&s.tr===0&&s.tty===0){
+        el.style.scale="";el.style.rotate="";if(!s.noT)el.style.translate="";
+        S.delete(el);
+      }
+    });
+  }
+
+  /* ---------- riak, tetes, tekanan ---------- */
+  const rips=[],drops=[],holds=[],bubs=[];
+  let raf=0,last=0;
+  function radiusOf(el,b){
+    const v=getComputedStyle(el).borderTopLeftRadius||"0";
+    const n=parseFloat(v)||0;
+    return v.indexOf("%")>0?Math.min(b.width,b.height)*n/100:n;
+  }
+  function addRipple(x,y,el,o){
+    o=o||{};
+    let ox=x,oy=y,R=Math.hypot(innerWidth,innerHeight),rad=0;
+    if(el){
+      const b=el.getBoundingClientRect();
+      ox=x-b.left;oy=y-b.top;
+      R=Math.max(Math.hypot(ox,oy),Math.hypot(b.width-ox,oy),Math.hypot(ox,b.height-oy),Math.hypot(b.width-ox,b.height-oy));
+      rad=radiusOf(el,b);
+    }
+    rips.push({el,ox,oy,R:R*(o.scale||1),rad,t:0,life:o.life||3.2,amp:o.amp||1,rings:o.rings||4,gap:o.gap||.2,spd:o.spd||1.3});
+    kick();
+  }
+  function addDrops(x,y,n,pow){
+    for(let i=0;i<n;i++){
+      const a=-Math.PI/2+(Math.random()-.5)*1.6,v=(150+Math.random()*170)*pow;
+      drops.push({x,y,vx:Math.cos(a)*v,vy:Math.sin(a)*v,r:1.6+Math.random()*2.4*pow,t:0,life:1+Math.random()*.5});
+    }
+    kick();
+  }
+  function rr(c,x,y,w,h,r){
+    r=Math.max(0,Math.min(r,w/2,h/2));
+    c.beginPath();c.moveTo(x+r,y);c.arcTo(x+w,y,x+w,y+h,r);c.arcTo(x+w,y+h,x,y+h,r);c.arcTo(x,y+h,x,y,r);c.arcTo(x,y,x+w,y,r);c.closePath();
+  }
+  function ring(x,y,r,a,w){
+    if(a<=.004||r<1)return;
+    ctx.lineWidth=w+2.2;ctx.strokeStyle="rgba(70,170,255,"+(a*.38).toFixed(3)+")";
+    ctx.beginPath();ctx.arc(x,y,r+w*.9,0,7);ctx.stroke();
+    ctx.lineWidth=w*.9;ctx.strokeStyle="rgba(0,50,110,"+(a*.2).toFixed(3)+")";
+    ctx.beginPath();ctx.arc(x,y,Math.max(1,r-w*1.1),0,7);ctx.stroke();
+    ctx.lineWidth=w;ctx.strokeStyle="rgba(255,255,255,"+Math.min(.95,a).toFixed(3)+")";
+    ctx.beginPath();ctx.arc(x,y,r,0,7);ctx.stroke();
+  }
+  function frame(t){
+    const dt=Math.min((t-last)/1000,.04);last=t;
+    stepSprings(dt);
+    ctx.setTransform(dpr,0,0,dpr,0,0);
+    ctx.clearRect(0,0,innerWidth,innerHeight);
+
+    /* penyok saat ditekan */
+    for(let i=holds.length-1;i>=0;i--){
+      const h=holds[i];
+      if(h.el&&!h.el.isConnected){holds.splice(i,1);continue}
+      h.t+=dt;h.pulse+=dt;
+      const b=h.el?h.el.getBoundingClientRect():null;
+      const x=b?b.left+h.ox:h.ox,y=b?b.top+h.oy:h.oy;
+      const e=1-Math.exp(-h.t*4.2);
+      const R=(h.big?78:40)*e;
+      ctx.save();
+      if(b){rr(ctx,b.left,b.top,b.width,b.height,h.rad);ctx.clip()}
+      const g=ctx.createRadialGradient(x,y,0,x,y,R*1.15);
+      g.addColorStop(0,"rgba(255,255,255,.30)");
+      g.addColorStop(.55,"rgba(190,235,255,.10)");
+      g.addColorStop(.82,"rgba(0,60,130,.16)");
+      g.addColorStop(.94,"rgba(255,255,255,.38)");
+      g.addColorStop(1,"rgba(255,255,255,0)");
+      ctx.fillStyle=g;ctx.beginPath();ctx.arc(x,y,R*1.15,0,7);ctx.fill();
+      ctx.restore();
+      if(h.pulse>.8){h.pulse=0;addRipple(x,y,h.el,{amp:.3,rings:2,scale:.75,spd:1.6,life:2.2})}
+    }
+
+    /* riak */
+    for(let i=rips.length-1;i>=0;i--){
+      const r=rips[i];
+      r.t+=dt;
+      if(r.t>r.life||(r.el&&!r.el.isConnected)){rips.splice(i,1);continue}
+      let x=r.ox,y=r.oy;
+      ctx.save();
+      if(r.el){
+        const b=r.el.getBoundingClientRect();
+        x=b.left+r.ox;y=b.top+r.oy;
+        rr(ctx,b.left,b.top,b.width,b.height,r.rad);ctx.clip();
+      }
+      for(let k=0;k<r.rings;k++){
+        const age=r.t-k*r.gap;
+        if(age<=0)continue;
+        const rad=r.R*(1-Math.exp(-age*r.spd))*1.04;
+        const a=r.amp*Math.exp(-age*1.05)*(1-k*.17)*(1-.45*Math.min(1,rad/r.R));
+        ring(x,y,rad,a,(k===0?2.6:1.9)*(1+age*.25));
+      }
+      ctx.restore();
+    }
+
+    /* tetes air */
+    for(let i=drops.length-1;i>=0;i--){
+      const d=drops[i];
+      d.t+=dt;
+      if(d.t>d.life){drops.splice(i,1);continue}
+      d.vy+=1100*dt;d.vx*=1-dt*1.2;d.x+=d.vx*dt;d.y+=d.vy*dt;
+      const a=1-d.t/d.life,r=d.r*(.5+.5*a);
+      const sx=Math.max(1,Math.min(1.7,1+Math.abs(d.vy)/1000));
+      ctx.save();ctx.translate(d.x,d.y);ctx.rotate(Math.atan2(d.vy,d.vx)-Math.PI/2);
+      ctx.globalAlpha=Math.min(1,a*1.3);
+      const g=ctx.createRadialGradient(-r*.3,-r*.3,0,0,0,r*sx);
+      g.addColorStop(0,"rgba(255,255,255,.95)");g.addColorStop(.5,"rgba(200,236,255,.7)");g.addColorStop(1,"rgba(110,200,255,.45)");
+      ctx.fillStyle=g;ctx.strokeStyle="rgba(255,255,255,.75)";ctx.lineWidth=.8;
+      ctx.beginPath();ctx.ellipse(0,0,r,r*sx,0,0,7);ctx.fill();ctx.stroke();
+      ctx.restore();
+    }
+    /* gelembung naik pelan dari tombol */
+    for(let i=bubs.length-1;i>=0;i--){
+      const q=bubs[i];
+      q.t+=dt;
+      if(q.t>q.life){
+        /* pecah: cincin kecil */
+        ring(q.x,q.y,q.r*(1.2+(q.t-q.life)*6),Math.max(0,.5-(q.t-q.life)*4),1.2);
+        if(q.t-q.life>.12)bubs.splice(i,1);
+        continue;
+      }
+      q.x+=Math.sin(q.t*3.2+q.ph)*16*dt;
+      q.y+=q.vy*dt;q.vy*=1-dt*.12;
+      const a=Math.min(1,q.t*5);
+      ctx.save();
+      ctx.globalAlpha=a*.95;
+      const g=ctx.createRadialGradient(q.x-q.r*.3,q.y-q.r*.3,q.r*.1,q.x,q.y,q.r);
+      g.addColorStop(0,"rgba(255,255,255,.35)");g.addColorStop(.7,"rgba(170,225,255,.12)");g.addColorStop(1,"rgba(255,255,255,.55)");
+      ctx.fillStyle=g;ctx.strokeStyle="rgba(255,255,255,.85)";ctx.lineWidth=1.1;
+      ctx.beginPath();ctx.arc(q.x,q.y,q.r,0,7);ctx.fill();ctx.stroke();
+      ctx.fillStyle="rgba(255,255,255,.9)";
+      ctx.beginPath();ctx.arc(q.x-q.r*.35,q.y-q.r*.35,q.r*.2,0,7);ctx.fill();
+      ctx.restore();
+    }
+    if(S.size||rips.length||drops.length||holds.length||bubs.length)raf=requestAnimationFrame(frame);
+    else{raf=0;ctx.clearRect(0,0,innerWidth,innerHeight)}
+  }
+  function kick(){if(!raf){last=performance.now();raf=requestAnimationFrame(frame)}}
+  window.wgRipple=addRipple;
+
+  /* ---------- efek tambahan khusus tombol ---------- */
+  function spawnBubbles(el,n){
+    const b=el.getBoundingClientRect(),big=Math.min(b.width,b.height)>60;
+    for(let i=0;i<n;i++){
+      bubs.push({
+        x:b.left+b.width*(.12+Math.random()*.76),
+        y:b.top+b.height*(.35+Math.random()*.5),
+        r:(big?3.5:2.4)+Math.random()*(big?5:3.5),
+        vy:-(32+Math.random()*48),ph:Math.random()*6,t:-Math.random()*.25,life:1.5+Math.random()*1.1
+      });
+    }
+    kick();
+  }
+  function flash(el){
+    if(!el.animate)return;
+    let base=getComputedStyle(el).boxShadow;
+    base=(base&&base!=="none")?base+",":"";
+    try{
+      el.animate([
+        {boxShadow:base+"0 0 0 0 rgba(150,225,255,.7),0 0 0 0 rgba(255,255,255,.5)",filter:"brightness(1.25)"},
+        {boxShadow:base+"0 0 0 14px rgba(150,225,255,0),0 0 0 6px rgba(255,255,255,0)",filter:"brightness(1)"}
+      ],{duration:1100,easing:"cubic-bezier(.2,.7,.3,1)"});
+    }catch(_){}
+  }
+
+  /* ---------- cari elemen yang ditekan ---------- */
+  function resolve(t){
+    const card=t.closest(".glass,.cloud");
+    let item=t.closest(BTN);
+    if(!item&&card&&t!==card){
+      let el=t.closest(ITEM);
+      if(el&&el!==card&&card.contains(el))item=el;
+      else{
+        el=t;
+        while(el&&el.parentElement!==card)el=el.parentElement;
+        if(el&&el!==card)item=el;
+      }
+    }
+    if(!item&&!card){const el=t.closest(LOOSE);if(el)item=el}
+    /* elemen inline tidak bisa di-scale, naik ke induknya */
+    while(item&&item!==card&&item.parentElement&&getComputedStyle(item).display==="inline")item=item.parentElement;
+    if(item===card)item=null;
+    return{card,item};
+  }
+  const depthOf=(el,card)=>{
+    const b=el.getBoundingClientRect(),m=Math.min(b.width,b.height);
+    return{d:card?(m<90?.05:.035):(m<48?.13:m<110?.08:.05),w:Math.max(1,b.width)};
+  };
+  /* gelombang menjalar ke elemen tetangga, makin jauh makin kecil dan makin lambat */
+  function wave(src,imp){
+    const p=src.parentElement;if(!p)return;
+    const kids=[...p.children].filter(k=>!(k instanceof SVGElement)&&k.offsetHeight>0&&!k.matches("canvas,script,style"));
+    const i=kids.indexOf(src);if(i<0)return;
+    for(let d=1;d<=3;d++){
+      [i-d,i+d].forEach(j=>{
+        const k=kids[j];if(!k)return;
+        const m=imp*Math.pow(.5,d);
+        setTimeout(()=>{
+          if(!k.isConnected)return;
+          const s=sp(k,k.classList.contains("glass")||k.classList.contains("cloud"));
+          s.vy+=m;s.vx-=m*.5;s.vty-=m*8;
+          kick();
+        },d*120);
+      });
+    }
+  }
+
+  /* ---------- interaksi ---------- */
+  const P=new Map();
+  const cardF=st=>st.item?(st.isBtn?.35:.6):1;
+  document.addEventListener("pointerdown",e=>{
+    if(off()||(e.pointerType==="mouse"&&e.button!==0))return;
+    if(e.target.closest&&e.target.closest(SKIP))return;
+    const {card,item}=resolve(e.target);
+    const x=e.clientX,y=e.clientY;
+    if(!card&&!item){
+      /* tap di langit kosong pada halaman awal / login / kota: riak air lebar */
+      if(e.target.closest&&e.target.closest("#home,#login,#city")){
+        addRipple(x,y,null,{amp:.5,rings:3,scale:.32,spd:1.5,life:3,gap:.25});
+      }
+      return;
+    }
+    const isBtn=!!item&&item.matches(BTN);
+    const isGlass=!!card&&card.classList.contains("glass");
+    const area=isBtn?item:(isGlass?card:null);
+    const st={id:e.pointerId,card,item,isBtn,area,x,y,lastTrail:performance.now(),hold:null,di:0,dc:0};
+
+    if(item){
+      const q=depthOf(item,false),s=sp(item,false),b=item.getBoundingClientRect();
+      st.di=q.d*(isBtn?1.15:1);
+      s.tsy=1-st.di;
+      s.tsx=1+Math.min(st.di*.3,8/q.w);
+      s.tty=st.di*12;
+      s.tr=((x-(b.left+b.width/2))/q.w)*(q.w>300?1.5:5);
+    }
+    if(card){
+      const q=depthOf(card,true),s=sp(card,true),b=card.getBoundingClientRect();
+      const f=cardF(st);
+      st.dc=q.d*f;
+      s.tsy=1-q.d*f;
+      s.tsx=1+Math.min(q.d*f*.25,8/q.w);
+      s.tty=q.d*f*10;
+      s.tr=((x-(b.left+b.width/2))/q.w)*1.4*f;
+    }
+    if(area){
+      addRipple(x,y,area,{amp:.6,rings:2,scale:.6,spd:1.8,life:2.2});
+      const bb=area.getBoundingClientRect();
+      const hold={el:area,ox:x-bb.left,oy:y-bb.top,t:0,pulse:0,big:!isBtn,rad:radiusOf(area,bb)};
+      holds.push(hold);st.hold=hold;
+    }else{
+      addRipple(x,y,null,{amp:.45,rings:2,scale:.25,spd:1.6,life:2.4,gap:.25});
+    }
+    P.set(e.pointerId,st);
+    kick();
+  },{passive:true});
+
+  document.addEventListener("pointermove",e=>{
+    const st=P.get(e.pointerId);
+    if(!st||off())return;
+    if(st.hold&&st.area){
+      const b=st.area.getBoundingClientRect();
+      st.hold.ox=e.clientX-b.left;st.hold.oy=e.clientY-b.top;
+    }
+    if(st.item&&S.has(st.item)){
+      const s=S.get(st.item),b=st.item.getBoundingClientRect();
+      s.tr=((e.clientX-(b.left+b.width/2))/Math.max(1,b.width))*(b.width>300?1.5:5);
+    }
+    if(st.card&&S.has(st.card)){
+      const s=S.get(st.card),b=st.card.getBoundingClientRect();
+      s.tr=((e.clientX-(b.left+b.width/2))/Math.max(1,b.width))*1.4*cardF(st);
+    }
+    const now=performance.now();
+    if(now-st.lastTrail>180&&Math.hypot(e.clientX-st.x,e.clientY-st.y)>22){
+      st.lastTrail=now;st.x=e.clientX;st.y=e.clientY;
+      addRipple(e.clientX,e.clientY,st.area,st.area?{amp:.35,rings:2,scale:.5,spd:1.6,life:2.2}:{amp:.3,rings:2,scale:.22,spd:1.6,life:2.2});
+    }
+  },{passive:true});
+
+  function release(e,cancel){
+    const st=P.get(e.pointerId);
+    if(!st)return;
+    P.delete(e.pointerId);
+    if(st.hold){const i=holds.indexOf(st.hold);if(i>=0)holds.splice(i,1)}
+
+    if(st.item){
+      const s=sp(st.item,false);
+      s.tsx=s.tsy=1;s.tr=0;s.tty=0;
+      if(!cancel){const m=st.di*(st.isBtn?5.2:4);s.vy+=m;s.vx-=m*.55;s.vty-=m*10}
+    }
+    if(st.card){
+      const s=sp(st.card,true);
+      s.tsx=s.tsy=1;s.tr=0;s.tty=0;
+      if(!cancel){const m=Math.max(st.dc,.012)*4;s.vy+=m;s.vx-=m*.5;s.vty-=m*8}
+    }
+    if(!cancel&&!off()){
+      if(st.area)addRipple(e.clientX,e.clientY,st.area,{amp:1,rings:4,spd:1.2,life:3.4,gap:.22});
+      else addRipple(e.clientX,e.clientY,null,{amp:.7,rings:4,scale:.34,spd:1.3,life:3.2,gap:.24});
+      if(st.isBtn){
+        /* efek tambahan tombol: kilau cincin + gelembung naik */
+        flash(st.item);
+        spawnBubbles(st.item,6);
+      }else addDrops(e.clientX,e.clientY,3,.5);
+      const src=st.item||st.card;
+      if(src)wave(src,(st.item?st.di:Math.max(st.dc,.02))*4);
+    }
+    kick();
+  }
+  document.addEventListener("pointerup",e=>release(e,false),{passive:true});
+  document.addEventListener("pointercancel",e=>release(e,true),{passive:true});
+
+  /* matikan efek :active lama supaya tidak dobel dengan pantulan air */
+  const st=document.createElement("style");
+  st.textContent=".actions button:active,.fav:active,.bottom:active,.gender button:active,.chip:active{transform:none!important}";
+  document.head.appendChild(st);
+})();
+
+/* ===== WATER GLASS: kartu muncul berurutan saat scroll ===== */
+(function(){
+  const content=document.getElementById("content");
+  if(!content||!("IntersectionObserver" in window)||!content.animate)return;
+  let revealNext=true;
+  const off=()=>(typeof reduced==="function"&&reduced());
+  const io=new IntersectionObserver(es=>{
+    const vis=es.filter(x=>x.isIntersecting).sort((a,b)=>a.boundingClientRect.top-b.boundingClientRect.top);
+    vis.forEach((en,k)=>{
+      const el=en.target;
+      io.unobserve(el);
+      const delay=Math.min(k,6)*95;
+      el.classList.remove("wg-pre");
+      const an=el.animate([
+        {translate:"0 56px",scale:"0.93 0.86",opacity:0,easing:"cubic-bezier(.2,.9,.3,1)"},
+        {translate:"0 -9px",scale:"1.02 1.05",opacity:1,offset:.46,easing:"cubic-bezier(.35,0,.3,1)"},
+        {translate:"0 4px",scale:"0.995 0.985",opacity:1,offset:.72,easing:"ease-in-out"},
+        {translate:"0 0",scale:"1 1",opacity:1}
+      ],{duration:950,delay:delay,fill:"backwards"});
+      if(el.classList.contains("glass")&&window.wgRipple&&!off()){
+        setTimeout(()=>{
+          if(!el.isConnected)return;
+          const b=el.getBoundingClientRect();
+          if(b.bottom<0||b.top>innerHeight)return;
+          window.wgRipple(b.left+b.width*(.25+Math.random()*.5),b.top+Math.min(b.height*.45,60),el,{amp:.55,rings:3,scale:.9,spd:2.1,life:1.9});
+        },delay+380);
+      }
+    });
+  },{threshold:.06});
+  new MutationObserver(()=>{
+    const ch=[...content.children];
+    if(!ch.length)return;
+    if(ch.length===1&&ch[0].classList.contains("loading")){revealNext=true;return}
+    if(!revealNext)return;
+    revealNext=false;
+    if(off())return;
+    ch.forEach(el=>{
+      if(el.id==="annSlot")return;
+      el.classList.add("wg-pre");
+      io.observe(el);
+    });
+  }).observe(content,{childList:true});
+})();
+</script>
+<!-- ===== REN WEATHER+ : radar, banding kota, peringatan, grafik, atmosfer, dasbor ===== -->
+<style id="renxCss">
+.rx{padding:14px;margin-bottom:12px;border-radius:26px}
+.rx .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.rxb{border:1px solid #ffffff55;background:#ffffff22;color:#fff;border-radius:14px;padding:9px 13px;font-weight:bold;cursor:pointer;transition:transform .15s,background .2s}
+.rxb:active{transform:scale(.94)}.rxb.on{background:#3eb8eb;border-color:#3eb8eb}
+.rxn{margin-top:8px;font-size:12px;opacity:.75;line-height:1.45}
+input.rxs{padding:0;background:transparent;border:0;height:28px;accent-color:#3eb8eb}
+input.rxq{padding:12px 14px;margin-top:10px;border-radius:14px;background:#ffffffee}
+#rxMap{height:300px;border-radius:20px;overflow:hidden;margin-top:10px;background:#0a2a4a55;position:relative;z-index:0;color:#123}
+#rxMap .leaflet-control-attribution{font-size:9px}
+.rxtabs{display:flex;gap:6px;flex-wrap:wrap}
+canvas.rxch{width:100%;height:230px;display:block;margin-top:10px;touch-action:pan-y;cursor:crosshair}
+.cmpg{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-top:10px}
+.cmpc{position:relative;padding:12px;border-radius:20px;background:#ffffff1c;border:1px solid #ffffff33}
+.cmpc b{display:block;padding-right:22px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cmpc .t{font-size:30px;font-weight:bold}.cmpc .x{position:absolute;right:8px;top:6px;border:0;background:none;color:#fff;font-size:16px;cursor:pointer;opacity:.7}
+.cmpc .bd{display:inline-block;font-size:11px;padding:2px 7px;border-radius:99px;background:#ffffff33;margin:4px 3px 0 0}
+.sgl{display:flex;flex-direction:column;gap:4px;margin-top:6px}
+.sgl button{text-align:left;padding:9px 12px;border-radius:12px;border:0;background:#ffffff2a;color:#fff;cursor:pointer}
+.axl{padding:12px 14px;border-radius:18px;margin-top:8px;background:#ffffff1c;border-left:5px solid #ffd166;line-height:1.45}
+.axl.l2{border-left-color:#ff5d5d;background:#ff5d5d26}.axl small{display:block;opacity:.8}
+.axok{padding:12px;border-radius:18px;background:#2fbf7140}
+#renToast{position:fixed;left:50%;bottom:22px;transform:translate(-50%,30px);max-width:92%;z-index:70;padding:12px 16px;border-radius:16px;background:#12315cf2;color:#fff;box-shadow:0 8px 28px #0006;opacity:0;pointer-events:none;transition:.35s}
+#renToast.on{opacity:1;transform:translate(-50%,0)}
+[data-dh]{display:none!important}
+#content.dashord{display:flex;flex-direction:column}
+body.dcompact #content .title{margin-top:14px;margin-bottom:7px}
+body.dcols2 #content .grid{grid-template-columns:repeat(2,1fr)!important}
+body.dcols3 #content .grid{grid-template-columns:repeat(3,1fr)!important}
+#dashM{position:fixed;inset:0;z-index:99000;background:#0008;display:none;align-items:flex-end;justify-content:center}
+#dashM.show{display:flex}
+.dsheet{width:min(520px,100%);max-height:88%;overflow:auto;background:linear-gradient(160deg,#1d5a9af5,#0d2a52f5);border:1px solid #ffffff44;border-radius:28px 28px 0 0;padding:18px;animation:dsh .35s cubic-bezier(.2,.8,.2,1)}
+@keyframes dsh{from{transform:translateY(60px);opacity:0}}
+.dri{display:flex;align-items:center;gap:8px;padding:9px 10px;border-radius:14px;background:#ffffff18;margin-top:7px}
+.dri span{flex:1}.dri.off{opacity:.5}.dri button{min-width:38px;min-height:38px}
+/* Dynamic Atmosphere */
+#atmo{position:fixed;inset:0;z-index:0;pointer-events:none;overflow:hidden;--dk:0;--ws:9s}
+#atmo i{position:absolute;inset:0;opacity:0;transition:opacity 2.5s ease,background 2.5s ease,box-shadow 2.5s}
+#atmo .a-tint{opacity:1;box-shadow:inset 0 0 0 100vmax rgba(8,22,46,var(--dk))}
+#atmo[data-p=dawn] .a-tint{background:linear-gradient(180deg,#5b4b9a55,#ff9a6a44 60%,#ffd9a033)}
+#atmo[data-p=dusk] .a-tint{background:linear-gradient(180deg,#3a2f7a55,#ff6b6b44 65%,#ffb36b33)}
+#atmo[data-p=night] .a-tint{background:linear-gradient(180deg,#050a2877,#0b1a4a55)}
+#atmo .a-stars{background-image:var(--stars);animation:tw 4s ease-in-out infinite alternate}
+#atmo[data-p=night][data-w=clear] .a-stars,#atmo[data-p=night][data-w=cloud] .a-stars{opacity:var(--so,.9)}
+@keyframes tw{from{filter:brightness(.7)}to{filter:brightness(1.3)}}
+#atmo .a-rays{background:conic-gradient(from 195deg at 88% -12%,transparent 0 8deg,#fff7 12deg,transparent 20deg,#fff5 28deg,transparent 38deg,#fff6 46deg,transparent 58deg);mix-blend-mode:soft-light;animation:ray 18s ease-in-out infinite alternate;will-change:transform}
+@keyframes ray{to{transform:rotate(5deg) scale(1.12)}}
+#atmo:is([data-p=day],[data-p=dawn],[data-p=dusk])[data-w=clear] .a-rays,#atmo[data-p=day][data-w=cloud] .a-rays{opacity:.8}
+#atmo .a-fog{left:-10%;right:-10%;background:radial-gradient(60% 30% at 20% 70%,#ffffffaa,transparent),radial-gradient(70% 35% at 80% 40%,#ffffff88,transparent),radial-gradient(50% 25% at 50% 92%,#fffc,transparent);animation:fg 30s ease-in-out infinite alternate;will-change:transform}
+@keyframes fg{to{transform:translateX(8%)}}
+#atmo[data-w=fog] .a-fog{opacity:.85}
+#atmo .a-wind{inset:0 auto 0 0;width:calc(100% + 400px);background:repeating-linear-gradient(100deg,transparent 0 80px,#ffffff30 80px 82px,transparent 82px 200px);background-size:400px 100%;animation:wn var(--ws) linear infinite;will-change:transform}
+@keyframes wn{to{transform:translateX(-400px)}}
+#atmo[data-wind=mid] .a-wind{opacity:.35;--ws:6s}#atmo[data-wind=hi] .a-wind{opacity:.7;--ws:3s}
+#atmo .a-flash{background:radial-gradient(70% 50% at 50% 0,#fff,#cfe4ff00 70%)}
+#atmo[data-w=storm] .a-flash{animation:fl 7s infinite}
+@keyframes fl{0%,89%,100%{opacity:0}91%{opacity:.5}92%{opacity:.08}93.5%{opacity:.45}}
+#atmo.off i{animation:none!important}#atmo.off .a-flash,#atmo.off .a-wind,#atmo.off .a-rays{display:none}
+body.hid #atmo i{animation-play-state:paused}
+@media(prefers-reduced-motion:reduce){#atmo i{animation:none!important}}
+</style>
+<script>
+(function(){
+"use strict";
+if(window.RenX)return;
+const R=window.RenX={};
+const div=(c,h)=>{const e=document.createElement("div");if(c)e.className=c;if(h!=null)e.innerHTML=h;return e};
+const jget=(k,d)=>{try{const v=JSON.parse(ls.get(k));return v==null?d:v}catch(e){return d}};
+const jset=(k,v)=>{try{ls.set(k,JSON.stringify(v))}catch(e){}};
+const num=(v,f)=>v==null||isNaN(v)?"–":(+v).toFixed(f||0);
+let tt=0;
+function toast(m){let t=$("renToast");if(!t){t=div("");t.id="renToast";document.body.appendChild(t)}t.textContent=m;t.classList.add("on");clearTimeout(tt);tt=setTimeout(()=>t.classList.remove("on"),4500)}
+function loadJs(src){return new Promise((ok,no)=>{const s=document.createElement("script");s.src=src;s.onload=ok;s.onerror=no;document.head.appendChild(s)})}
+async function lib(){
+  if(window.L)return;
+  const l=document.createElement("link");l.rel="stylesheet";l.href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css";document.head.appendChild(l);
+  await loadJs("https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js");
+}
+function titleOf(el){return el.classList.contains("title")?el:el.querySelector(":scope > .title")}
+function findSec(txt){return [...$("content").children].find(el=>{const t=titleOf(el);return t&&t.textContent.trim().startsWith(txt)})}
+function addSec(title,panel,beforeTxt){
+  const c=$("content"),t=div("title");t.textContent=title;
+  const ref=findSec(beforeTxt)||findSec("Pengaturan");
+  [t,panel].forEach(x=>ref?c.insertBefore(x,ref):c.appendChild(x));
+}
+
+/* ========== 1. RADAR (RainViewer: radar observasi 2 jam terakhir) ========== */
+const RX={frames:[],i:0,user:false,vis:false,tm:0,ts:0,busy:false};
+const rq=s=>RX.el.querySelector(s);
+function rxPanel(){
+  if(RX.el)return RX.el;
+  const e=RX.el=div("rx glass",`<div class="row"><button class="rxb on" data-a="play">⏸ Jeda</button><span class="ds" data-a="time" style="flex:1;text-align:right">Radar dimuat saat terlihat…</span></div>
+  <input class="rxs" data-a="sl" type="range" min="0" max="0" value="0" aria-label="Frame radar">
+  <div id="rxMap"></div>
+  <div class="row" style="margin-top:8px"><button class="rxb" data-a="lock"></button><button class="rxb" data-a="ctr">📍 Ke kotaku</button></div>
+  <div class="rxn">Radar hujan observasi 2 jam terakhir (interval 10 menit) dari RainViewer. Bukan prakiraan. Cakupan radar tidak merata: area kosong belum tentu tidak hujan.</div>`);
+  RX.lock=matchMedia("(pointer:coarse)").matches;
+  rq('[data-a=play]').onclick=()=>{RX.user=!RX.user;rxPlayState()};
+  rq('[data-a=sl]').oninput=ev=>{RX.user=true;rxPlayState();rxShow(+ev.target.value)};
+  rq('[data-a=lock]').onclick=()=>{RX.lock=!RX.lock;rxLock()};
+  rq('[data-a=ctr]').onclick=()=>{if(RX.map&&loc)RX.map.setView([loc.lat,loc.lon],6)};
+  rxLockLabel();
+  RX.io=new IntersectionObserver(en=>{RX.vis=en[0].isIntersecting;if(RX.vis){if(!RX.map)rxInit();else{RX.map.invalidateSize();if(Date.now()-RX.ts>3e5)rxFrames().catch(()=>{});rxSync()}}rxPlayState()},{threshold:.15});
+  RX.io.observe(e);
+  return e;
+}
+function rxLockLabel(){rq('[data-a=lock]').textContent=RX.lock?"🔒 Geser peta terkunci":"🔓 Peta bebas"}
+function rxLock(){
+  rxLockLabel();if(!RX.map)return;
+  ["dragging","touchZoom","scrollWheelZoom","doubleClickZoom","boxZoom"].forEach(k=>RX.map[k][RX.lock?"disable":"enable"]());
+}
+function rxSync(){
+  if(!RX.map||!loc)return;
+  const k=ck(loc);
+  if(RX.k!==k){RX.k=k;RX.map.setView([loc.lat,loc.lon],RX.map.getZoom()||6);RX.mk.setLatLng([loc.lat,loc.lon])}
+}
+async function rxInit(){
+  if(RX.busy||RX.map||!loc)return;RX.busy=true;
+  try{
+    await lib();
+    const m=RX.map=L.map("rxMap",{minZoom:3,maxZoom:10,worldCopyJump:true}).setView([loc.lat,loc.lon],6);
+    L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:19,attribution:"© OpenStreetMap"}).addTo(m);
+    RX.mk=L.circleMarker([loc.lat,loc.lon],{radius:7,color:"#fff",weight:2,fillColor:"#ff4d6d",fillOpacity:1}).addTo(m);RX.k=ck(loc);
+    m.on("zoomend moveend",()=>RX.frames.forEach((g,k)=>{if(g.l&&k!==RX.i){m.removeLayer(g.l);g.l=null}}));
+    rxLock();
+    await rxFrames();
+  }catch(e){RX.map&&RX.map.remove();RX.map=null;rq('[data-a=time]').textContent="Radar gagal dimuat (cek koneksi)"}
+  finally{RX.busy=false}
+}
+async function rxFrames(){
+  const r=await fetch("https://api.rainviewer.com/public/weather-maps.json");
+  if(!r.ok)throw new Error("rv");
+  const j=await r.json(),past=(j.radar&&j.radar.past)||[];
+  if(!past.length)throw new Error("empty");
+  RX.frames.forEach(g=>g.l&&RX.map.removeLayer(g.l));
+  RX.host=j.host;RX.frames=past.map(f=>({t:f.time,p:f.path,l:null}));RX.ts=Date.now();
+  const s=rq('[data-a=sl]');s.max=RX.frames.length-1;
+  rxShow(RX.frames.length-1);rxPlayState();
+}
+function rxShow(i){
+  const f=RX.frames[i];if(!f||!RX.map)return;
+  if(!f.l)f.l=L.tileLayer(RX.host+f.p+"/256/{z}/{x}/{y}/2/1_1.png",{opacity:0,maxNativeZoom:7,maxZoom:10,tileSize:256,zIndex:5,attribution:"Radar © RainViewer"}).addTo(RX.map);
+  RX.frames.forEach((g,k)=>g.l&&g.l.setOpacity(k===i?.75:0));
+  RX.i=i;rq('[data-a=sl]').value=i;
+  const d=new Date((f.t+((weather&&weather.utc_offset_seconds)||0))*1000),ago=Math.max(0,Math.round((Date.now()/1000-f.t)/60));
+  rq('[data-a=time]').textContent=String(d.getUTCHours()).padStart(2,"0")+":"+String(d.getUTCMinutes()).padStart(2,"0")+" · "+ago+" mnt lalu";
+}
+function rxPlayState(){
+  clearTimeout(RX.tm);
+  const b=rq('[data-a=play]'),on=RX.vis&&!RX.user&&RX.frames.length>1&&!document.hidden&&!reduced();
+  b.textContent=RX.user?"▶ Putar":"⏸ Jeda";b.classList.toggle("on",!RX.user);
+  if(!on)return;
+  (function step(){RX.tm=setTimeout(()=>{rxShow((RX.i+1)%RX.frames.length);step()},RX.i===RX.frames.length-1?1800:650)})();
+}
+
+/* ========== 2. BANDINGKAN KOTA (Open-Meteo multi-lokasi) ========== */
+let CMP=jget("renCmp",[]).filter(c=>c&&isFinite(c.lat)&&isFinite(c.lon)&&c.name).slice(0,5);
+const CD={data:null,key:"",ts:0,sugg:[],t:0};
+const cmpList=()=>[{name:loc.name,lat:loc.lat,lon:loc.lon,main:1}].concat(CMP);
+const cmpKey=()=>cmpList().map(ck).join("|");
+function cmpPanel(){
+  const p=div("rx glass",`<div class="rxn" style="margin:0">Kota utama + sampai 5 kota lain. Data dari Open-Meteo.</div>
+  <input class="rxq" id="cmpQ" placeholder="Tambah kota…" autocomplete="off" oninput="RenX.cmpType()">
+  <div class="sgl" id="cmpS"></div><div class="cmpg" id="cmpC"></div>`);
+  p.id="cmpP";cmpCards();cmpPaintSugg();
+  if(CD.key!==cmpKey()||Date.now()-CD.ts>3e5)cmpLoad();
+  return p;
+}
+async function cmpLoad(){
+  const L0=cmpList(),key=cmpKey();
+  try{
+    const u="https://api.open-meteo.com/v1/forecast?latitude="+L0.map(c=>c.lat).join(",")+"&longitude="+L0.map(c=>c.lon).join(",")+"&timezone=auto&forecast_days=1&current=temperature_2m,apparent_temperature,relative_humidity_2m,weather_code,wind_speed_10m,wind_gusts_10m&daily=precipitation_sum,precipitation_probability_max";
+    const r=await fetch(u);if(!r.ok)throw new Error();
+    const j=await r.json();CD.data=Array.isArray(j)?j:[j];CD.key=key;CD.ts=Date.now();CD.err=0;
+  }catch(e){CD.data=null;CD.err=1}
+  cmpCards();
+}
+function cmpCards(){
+  const c=$("cmpC");if(!c)return;
+  const L0=cmpList(),ok=CD.data&&CD.key===cmpKey();
+  if(!ok){c.innerHTML=`<div class="ds">${CD.err?"Gagal memuat data kota.":"⟳ Memuat perbandingan…"}</div>`;return}
+  const rows=CD.data.map(x=>x.current),mx=(f)=>Math.max(...rows.map(f));
+  const hot=mx(x=>x.temperature_2m),wet=Math.max(...CD.data.map(x=>x.daily.precipitation_sum[0]||0)),wind=mx(x=>x.wind_speed_10m);
+  c.innerHTML=L0.map((q,k)=>{
+    const r=CD.data[k].current,dd=CD.data[k].daily,w=wcode(r.weather_code),rs=dd.precipitation_sum[0]||0;
+    const b=[r.temperature_2m===hot&&L0.length>1?"🔥 Terpanas":"",wet>0&&rs===wet&&L0.length>1?"💧 Terbasah":"",r.wind_speed_10m===wind&&L0.length>1&&wind>0?"💨 Terkencang":""].filter(Boolean).map(t=>`<span class="bd">${t}</span>`).join("");
+    return `<div class="cmpc">${q.main?"":`<button class="x" aria-label="Hapus" onclick="RenX.cmpDel(${k-1})">✕</button>`}<b>${q.main?"📍 ":""}${esc(q.name)}</b><div class="t">${w[0]} ${fT(r.temperature_2m)}</div><div class="ds">${esc(w[1])} · terasa ${fT(r.apparent_temperature)}</div><div class="ds">💧 ${num(r.relative_humidity_2m)}% · 💨 ${fW(r.wind_speed_10m)}</div><div class="ds">☔ ${num(dd.precipitation_probability_max[0])}% · ${num(rs,1)} mm hari ini</div>${b}</div>`}).join("");
+}
+function cmpPaintSugg(){
+  const s=$("cmpS");if(!s)return;
+  s.innerHTML=CD.sugg.map((p,k)=>`<button onclick="RenX.cmpAdd(${k})">${esc(p.name)} <span class="ds">${esc([p.admin1,p.country].filter(Boolean).join(", "))}</span></button>`).join("");
+}
+R.cmpType=()=>{
+  clearTimeout(CD.t);const q=$("cmpQ").value.trim();
+  if(q.length<2){CD.sugg=[];cmpPaintSugg();return}
+  CD.t=setTimeout(async()=>{
+    try{const r=await fetch("https://geocoding-api.open-meteo.com/v1/search?name="+encodeURIComponent(q)+"&count=5&language=id&format=json");const j=await r.json();CD.sugg=(j.results||[]);}catch(e){CD.sugg=[]}
+    cmpPaintSugg();
+  },350);
+};
+R.cmpAdd=k=>{
+  const p=CD.sugg[k];if(!p)return;
+  if(CMP.length>=5){toast("Maksimal 5 kota tambahan");return}
+  const n={name:p.name,lat:+p.latitude,lon:+p.longitude};
+  if(cmpList().some(c=>ck(c)===ck(n))){toast("Kota sudah ada");return}
+  CMP.push(n);jset("renCmp",CMP);CD.sugg=[];$("cmpQ").value="";cmpPaintSugg();cmpCards();cmpLoad();
+};
+R.cmpDel=k=>{CMP.splice(k,1);jset("renCmp",CMP);cmpCards();cmpLoad()};
+
+/* ========== 3. PERINGATAN CUACA EKSTREM (hasil analisis prakiraan Open-Meteo) ========== */
+let alertOn=ls.get("renAlertOn")==="1",ALERTS=[];
+function buildAlerts(){
+  const h=weather.hourly,a=air.hourly,d=weather.daily,i=nowIndex(h.time),ai=nowIndex(a.time),end=Math.min(i+48,h.time.length),out=[];
+  const scan=(key,icon,title,test,txt)=>{
+    let first=-1,peak=null,lv=0;
+    for(let k=i;k<end;k++){const r=test(k);if(r&&r.lv){if(first<0)first=k;lv=Math.max(lv,r.lv);peak=r.v!=null&&(peak==null||r.v>peak)?r.v:peak}}
+    if(first>=0)out.push({key:key+"@"+h.time[first].slice(0,10),lv,icon,title,at:first,text:txt(peak,first),soon:first-i<=6});
+  };
+  const when=k=>k<=i?"sedang berlangsung":"mulai sekitar "+hh(h.time[k])+(h.time[k].slice(0,10)!==h.time[i].slice(0,10)?" (besok)":"");
+  scan("storm","⛈️","Badai petir",k=>[95,96,99].includes(h.weather_code[k])?{lv:h.weather_code[k]>=96?2:1}:0,(p,k)=>"Potensi badai petir, "+when(k)+". Hindari tempat terbuka.");
+  scan("rain","🌧️","Hujan lebat",k=>{const v=h.precipitation[k]||0;return v>=25?{lv:2,v}:v>=8?{lv:1,v}:0},(p,k)=>"Intensitas hingga "+num(p,1)+" mm/jam, "+when(k)+". Waspada genangan.");
+  scan("gust","💨","Angin kencang",k=>{const v=h.wind_gusts_10m[k]||0;return v>=75?{lv:2,v}:v>=50?{lv:1,v}:0},(p,k)=>"Hembusan hingga "+fW(p)+", "+when(k)+".");
+  scan("heat","🥵","Suhu terasa panas",k=>{const v=h.apparent_temperature[k];return v>=41?{lv:2,v}:v>=38?{lv:1,v}:0},(p,k)=>"Terasa hingga "+fT(p)+", "+when(k)+". Banyak minum, hindari aktivitas berat.");
+  scan("cold","🥶","Suhu terasa dingin",k=>{const v=h.apparent_temperature[k];return v<=5?{lv:2,v:-v}:v<=10?{lv:1,v:-v}:0},(p,k)=>"Terasa hingga "+fT(-p)+", "+when(k)+". Pakai pakaian hangat.");
+  scan("vis","🌫️","Jarak pandang rendah",k=>{const v=h.visibility[k];return v!=null&&v<=500?{lv:2,v}:v!=null&&v<=1000?{lv:1,v}:0},(p,k)=>"Jarak pandang sekitar "+visibility(Math.min(...h.visibility.slice(i,end).filter(v=>v!=null)))+", "+when(k)+". Berkendara hati-hati.");
+  const uvm=Math.max(...a.uv_index.slice(ai,ai+48).filter(v=>v!=null),0),aqm=Math.max(...a.us_aqi.slice(ai,ai+48).filter(v=>v!=null),0);
+  if(uvm>=11)out.push({key:"uv@"+h.time[i].slice(0,10),lv:uvm>=13?2:1,icon:"🧴",title:"Indeks UV ekstrem",at:i,soon:true,text:"UV hingga "+num(uvm,1)+". Hindari matahari siang dan pakai pelindung."});
+  if(aqm>150)out.push({key:"aqi@"+h.time[i].slice(0,10),lv:aqm>200?2:1,icon:"😷",title:"Kualitas udara buruk",at:i,soon:true,text:"AQI hingga "+aqm+". Pertimbangkan masker dan kurangi aktivitas luar."});
+  return out.sort((x,y)=>y.lv-x.lv||x.at-y.at);
+}
+function alertPanel(){
+  const p=div("rx glass");
+  const sup="Notification" in window;
+  p.innerHTML=(ALERTS.length?ALERTS.map(x=>`<div class="axl ${x.lv>1?"l2":""}"><b>${x.icon} ${x.title}${x.lv>1?" · SIAGA":""}</b><small>${esc(x.text)}</small></div>`).join(""):`<div class="axok">✅ Tidak ada kondisi ekstrem terdeteksi dalam 48 jam ke depan.</div>`)+
+  `<div class="row" style="margin-top:12px"><button class="rxb ${alertOn?"on":""}" onclick="RenX.toggleAlert()">${alertOn?"🔔 Notifikasi peringatan: Aktif":"🔕 Aktifkan notifikasi peringatan"}</button></div>
+  <div class="rxn">Dihitung otomatis dari prakiraan model Open-Meteo, <b>bukan</b> peringatan resmi. Untuk peringatan resmi cek <a href="https://www.bmkg.go.id" target="_blank" rel="noopener" style="color:#bfe6ff">bmkg.go.id</a>. Notifikasi hanya muncul saat aplikasi terbuka${sup?"":" (browser ini tidak mendukung notifikasi sistem; pakai pemberitahuan di dalam aplikasi)"}.</div>`;
+  return p;
+}
+R.toggleAlert=async()=>{
+  if(!alertOn){
+    if("Notification" in window&&Notification.permission==="default"){try{await Notification.requestPermission()}catch(e){}}
+    alertOn=true;ls.set("renAlertOn","1");
+    if(!("Notification" in window)||Notification.permission!=="granted")toast("Izin notifikasi sistem belum diberikan. Peringatan tampil di dalam aplikasi.");
+  }else{alertOn=false;ls.set("renAlertOn","0")}
+  render();
+};
+function notifyAlerts(){
+  if(!alertOn||!ALERTS.length)return;
+  const seen=jget("renAlertSeen",{}),now=Date.now();
+  Object.keys(seen).forEach(k=>{if(now-seen[k]>3*864e5)delete seen[k]});
+  ALERTS.filter(x=>x.lv>1||x.soon).forEach(x=>{
+    const k=ck(loc)+"|"+x.key;if(seen[k])return;seen[k]=now;
+    const msg=x.icon+" "+x.title+": "+x.text;
+    let shown=false;
+    if("Notification" in window&&Notification.permission==="granted"){try{new Notification("Ren Weather · "+loc.name,{body:msg,tag:k});shown=true}catch(e){}}
+    if(!shown){toast(msg);try{navigator.vibrate&&navigator.vibrate(x.lv>1?[200,100,200]:120)}catch(e){}}
+  });
+  jset("renAlertSeen",seen);
+}
+setInterval(()=>{if(alertOn&&!document.hidden&&navigator.onLine&&$("weather").classList.contains("active")&&loc)loadWeather()},15*60*1000);
+
+/* ========== 4. GRAFIK INTERAKTIF ========== */
+const CH={tab:"t",rng:24,ix:-1};
+const CT={t:"🌡️ Suhu",h:"💧 Lembap",r:"🌧️ Hujan",w:"💨 Angin"};
+function chSeries(){
+  const h=weather.hourly,i=nowIndex(h.time),e=Math.min(i+CH.rng,h.time.length),sl=a=>a.slice(i,e);
+  const x=sl(h.time);
+  if(CH.tab==="t")return{x,u:"°",s:[{n:"Suhu",v:sl(h.temperature_2m).map(cvT),c:"#ffd166"},{n:"Terasa",v:sl(h.apparent_temperature).map(cvT),c:"#ff8fab"}]};
+  if(CH.tab==="h")return{x,u:"%",min:0,max:100,s:[{n:"Kelembapan",v:sl(h.relative_humidity_2m),c:"#7ee0ff"}]};
+  if(CH.tab==="r")return{x,u:" mm",min:0,bar:1,s:[{n:"Curah hujan",v:sl(h.precipitation),c:"#5aa9ff"}],extra:sl(h.precipitation_probability)};
+  return{x,u:units.w==="ms"?" m/s":" km/j",min:0,s:[{n:"Angin",v:sl(h.wind_speed_10m).map(cvW),c:"#9cf0c4"},{n:"Hembusan",v:sl(h.wind_gusts_10m).map(cvW),c:"#ffb86b"}]};
+}
+function chDraw(cv){
+  if(!cv||!cv.isConnected||!weather)return;
+  const D=chSeries(),dpr=Math.min(devicePixelRatio||1,2),W=cv.clientWidth,H=cv.clientHeight;if(!W)return;
+  cv.width=W*dpr;cv.height=H*dpr;const g=cv.getContext("2d");g.setTransform(dpr,0,0,dpr,0,0);g.clearRect(0,0,W,H);
+  const all=D.s.flatMap(s=>s.v).filter(v=>v!=null);let lo=D.min!=null?D.min:Math.min(...all),hi=D.max!=null?D.max:Math.max(...all);
+  if(hi-lo<(D.bar?1:2))hi=lo+(D.bar?1:2);const pad=D.min!=null?0:(hi-lo)*.1;if(D.min==null){lo-=pad}hi+=pad*.5;
+  const L=40,Rr=10,T=12,B=24,n=D.x.length,px=k=>L+(n<2?0:k*(W-L-Rr)/(n-1)),py=v=>T+(hi-v)*(H-T-B)/(hi-lo);
+  g.font="11px Arial";g.textBaseline="middle";g.strokeStyle="#ffffff2e";g.fillStyle="#ffffffcc";
+  for(let k=0;k<=4;k++){const v=lo+(hi-lo)*k/4,y=py(v);g.beginPath();g.moveTo(L,y);g.lineTo(W-Rr,y);g.stroke();g.textAlign="right";g.fillText(Math.round(v*(D.bar?10:1))/(D.bar?10:1)+"",L-5,y)}
+  g.textAlign="center";const step=Math.max(1,Math.round(n/5));
+  for(let k=0;k<n;k+=step){const t=new Date(D.x[k]);g.fillText(CH.rng>48?t.toLocaleDateString("id-ID",{weekday:"short"}):String(t.getHours()).padStart(2,"0")+":00",px(k),H-9)}
+  D.s.forEach((s,si)=>{
+    g.strokeStyle=s.c;g.fillStyle=s.c;g.lineWidth=2;g.lineJoin="round";
+    if(D.bar){const bw=Math.max(2,(W-L-Rr)/n*.7);s.v.forEach((v,k)=>{if(v>0){const y=py(v);g.fillRect(px(k)-bw/2,y,bw,py(lo)-y)}});return}
+    g.beginPath();s.v.forEach((v,k)=>k?g.lineTo(px(k),py(v)):g.moveTo(px(k),py(v)));g.stroke();
+    if(si===0){g.lineTo(px(n-1),py(lo));g.lineTo(px(0),py(lo));const gr=g.createLinearGradient(0,T,0,H-B);gr.addColorStop(0,s.c+"55");gr.addColorStop(1,s.c+"00");g.fillStyle=gr;g.fill()}
+  });
+  if(CH.ix>=0&&CH.ix<n){
+    const x=px(CH.ix);g.strokeStyle="#fff";g.lineWidth=1;g.beginPath();g.moveTo(x,T);g.lineTo(x,H-B);g.stroke();
+    D.s.forEach(s=>{g.fillStyle=s.c;g.beginPath();g.arc(x,py(s.v[CH.ix]),4,0,7);g.fill()});
+    const t=new Date(D.x[CH.ix]),lines=[t.toLocaleDateString("id-ID",{weekday:"short",day:"numeric",month:"short"})+" "+String(t.getHours()).padStart(2,"0")+":00"].concat(D.s.map(s=>s.n+": "+num(s.v[CH.ix],D.bar?1:0)+D.u));
+    if(D.extra)lines.push("Peluang: "+num(D.extra[CH.ix])+"%");
+    g.font="bold 11px Arial";const bw=Math.max(...lines.map(l=>g.measureText(l).width))+16,bh=lines.length*16+8,bx=Math.min(Math.max(x-bw/2,L),W-Rr-bw);
+    g.fillStyle="#0b2b52ee";g.beginPath();g.roundRect?g.roundRect(bx,T+2,bw,bh,10):g.rect(bx,T+2,bw,bh);g.fill();
+    g.fillStyle="#fff";g.textAlign="left";lines.forEach((l,k)=>g.fillText(l,bx+8,T+14+k*16));
+  }
+}
+function chPanel(){
+  const p=div("rx glass",`<div class="rxtabs" data-t></div><div class="rxtabs" data-r style="margin-top:8px"></div><canvas class="rxch" aria-label="Grafik cuaca"></canvas>`);
+  const cv=p.querySelector("canvas");
+  const paint=()=>{
+    p.querySelector("[data-t]").innerHTML=Object.keys(CT).map(k=>`<button class="rxb ${CH.tab===k?"on":""}" data-k="${k}">${CT[k]}</button>`).join("");
+    p.querySelector("[data-r]").innerHTML=[[24,"24 jam"],[48,"48 jam"],[168,"7 hari"]].map(a=>`<button class="rxb ${CH.rng===a[0]?"on":""}" data-g="${a[0]}">${a[1]}</button>`).join("");
+    chDraw(cv);
+  };
+  p.onclick=e=>{const b=e.target.closest("button");if(!b)return;if(b.dataset.k)CH.tab=b.dataset.k;if(b.dataset.g)CH.rng=+b.dataset.g;CH.ix=-1;paint()};
+  const mv=e=>{const r=cv.getBoundingClientRect(),n=chSeries().x.length;CH.ix=Math.max(0,Math.min(n-1,Math.round((e.clientX-r.left-40)/(r.width-50)*(n-1))));chDraw(cv)};
+  cv.onpointermove=mv;cv.onpointerdown=mv;cv.onpointerleave=()=>{CH.ix=-1;chDraw(cv)};
+  new ResizeObserver(()=>chDraw(cv)).observe(cv);
+  paint();return p;
+}
+
+/* ========== 5. DYNAMIC ATMOSPHERE ========== */
+function atmo(){
+  const sc=$("weather");let a=$("atmo");
+  if(!a){
+    a=div("");a.id="atmo";a.innerHTML='<i class="a-tint"></i><i class="a-stars"></i><i class="a-rays"></i><i class="a-fog"></i><i class="a-wind"></i><i class="a-flash"></i>';
+    let st=[];for(let k=0;k<48;k++)st.push(`radial-gradient(${1+(k%3)*.5}px ${1+(k%3)*.5}px at ${(k*37.7)%100}% ${(k*23.3)%62}%,#fff,transparent)`);
+    a.style.setProperty("--stars",st.join(","));
+    sc.insertBefore(a,$("wxbg").nextSibling);
+  }
+  if(!weather)return;
+  const h=weather.hourly,d=weather.daily,i=nowIndex(h.time),c=h.weather_code[i],now=new Date(cityNow()).getTime(),sr=new Date(d.sunrise[0]).getTime(),ss=new Date(d.sunset[0]).getTime(),m=6e4;
+  const p=now<sr-45*m||now>ss+45*m?"night":Math.abs(now-sr)<=45*m?"dawn":now>=ss-60*m?"dusk":"day";
+  const cat=[95,96,99].includes(c)?"storm":[45,48].includes(c)?"fog":RAINC.includes(c)?"rain":[71,73,75,77,85,86].includes(c)?"snow":c<=1?"clear":"cloud";
+  const cl=(h.cloud_cover[i]||0)/100,w=h.wind_speed_10m[i]||0;
+  a.dataset.p=p;a.dataset.w=cat;a.dataset.wind=w>=30?"hi":w>=15?"mid":"lo";
+  a.style.setProperty("--dk",(["rain","storm","snow"].includes(cat)?.28:cat==="cloud"?cl*.15:0)+"");
+  a.style.setProperty("--so",(1-cl*.8).toFixed(2));
+  a.classList.toggle("off",reduced());
+}
+document.addEventListener("visibilitychange",()=>{document.body.classList.toggle("hid",document.hidden);if(RX.el)rxPlayState()});
+setInterval(()=>{if(weather&&!document.hidden)atmo()},6e4);
+
+/* ========== 6. PERSONAL DASHBOARD ========== */
+let DASH=jget("renDash",{order:[],hidden:{},cols:0,dens:0});
+const slug=t=>t.trim().toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"");
+function scan(){
+  const secs=[];let cur=null,pin=false;
+  [...$("content").children].forEach(el=>{
+    const t=titleOf(el);
+    if(t){const label=t.textContent.trim();pin=slug(label)==="pengaturan";cur=pin?{pin:1,els:[]}:{key:slug(label),label,els:[]};secs.push(cur)}
+    if(cur)cur.els.push(el);
+  });
+  return secs;
+}
+function orderedSecs(){
+  const s=scan().filter(x=>!x.pin),pos=k=>{const j=DASH.order.indexOf(k);return j<0?1e3:j};
+  return s.map((x,k)=>({x,k})).sort((a,b)=>(pos(a.x.key)-pos(b.x.key))||(a.k-b.k)).map(o=>o.x);
+}
+function applyDash(){
+  const c=$("content"),all=scan(),vis=orderedSecs();
+  all.forEach(s=>s.els.forEach(e=>{e.style.order=s.pin?9999:"";e.toggleAttribute("data-dh",!s.pin&&!!DASH.hidden[s.key])}));
+  vis.forEach((s,k)=>s.els.forEach(e=>e.style.order=(k+1)*10));
+  c.classList.toggle("dashord",DASH.order.length>0);
+  document.body.classList.toggle("dcompact",DASH.dens===1);
+  document.body.classList.toggle("dcols2",DASH.cols===2);document.body.classList.toggle("dcols3",DASH.cols===3);
+}
+function dashSave(){jset("renDash",DASH);applyDash()}
+function dashList(){
+  if(!$("dashL"))return;
+  const L0=orderedSecs();
+  $("dashL").innerHTML=L0.map((s,k)=>`<div class="dri ${DASH.hidden[s.key]?"off":""}"><span>${esc(s.label)}</span><button class="rxb" onclick="RenX.dMove(${k},-1)" ${k?"":"disabled"} aria-label="Naik">▲</button><button class="rxb" onclick="RenX.dMove(${k},1)" ${k<L0.length-1?"":"disabled"} aria-label="Turun">▼</button><button class="rxb ${DASH.hidden[s.key]?"":"on"}" onclick="RenX.dHide('${s.key}')" aria-label="Tampilkan atau sembunyikan">${DASH.hidden[s.key]?"🙈":"👁️"}</button></div>`).join("");
+  $("dashD").innerHTML=[["Padat",1,"dens"],["Nyaman",0,"dens"]].map(a=>`<button class="rxb ${DASH.dens===a[1]?"on":""}" onclick="RenX.dSet('dens',${a[1]})">${a[0]}</button>`).join("")+" "+[["Kolom otomatis",0],["2 kolom",2],["3 kolom",3]].map(a=>`<button class="rxb ${DASH.cols===a[1]?"on":""}" onclick="RenX.dSet('cols',${a[1]})">${a[0]}</button>`).join("");
+}
+R.dMove=(k,dir)=>{const keys=orderedSecs().map(s=>s.key),j=k+dir;if(j<0||j>=keys.length)return;[keys[k],keys[j]]=[keys[j],keys[k]];DASH.order=keys;dashSave();dashList()};
+R.dHide=k=>{DASH.hidden[k]?delete DASH.hidden[k]:DASH.hidden[k]=1;dashSave();dashList()};
+R.dSet=(f,v)=>{DASH[f]=v;dashSave();dashList()};
+R.dReset=()=>{DASH={order:[],hidden:{},cols:0,dens:0};dashSave();dashList()};
+R.openDash=()=>{
+  let m=$("dashM");
+  if(!m){m=div("");m.id="dashM";m.innerHTML=`<div class="dsheet"><div class="title" style="margin:0 0 4px">🎛️ Dasbor pribadi</div><div class="ds">Atur urutan dan tampilan kartu. Tersimpan hanya di perangkat ini.</div><div id="dashL"></div><div class="title" style="font-size:16px">Tampilan</div><div id="dashD" class="rxtabs"></div><div class="row" style="margin-top:14px;display:flex;gap:8px"><button class="rxb" onclick="RenX.dReset()">↩️ Atur ulang</button><button class="rxb on" onclick="RenX.closeDash()">Selesai</button></div></div>`;m.onclick=e=>{if(e.target===m)R.closeDash()};document.body.appendChild(m)}
+  dashList();m.classList.add("show");
+};
+R.closeDash=()=>$("dashM").classList.remove("show");
+function headBtn(){
+  const a=document.querySelector("#weather .actions");if(!a||$("dashBtn"))return;
+  const b=document.createElement("button");b.id="dashBtn";b.title="Dasbor pribadi";b.textContent="🎛️";b.onclick=R.openDash;a.insertBefore(b,a.firstChild);
+}
+
+/* ========== PENGAIT KE RENDER LAMA ========== */
+function enhance(){
+  try{
+    addSec("⚠️ Peringatan cuaca",(ALERTS=buildAlerts(),alertPanel()),"Cuaca per jam");
+    addSec("📈 Grafik interaktif",chPanel(),"Rentang suhu");
+    addSec("🛰️ Radar hujan",rxPanel(),"Matahari dan bulan");
+    addSec("🏙️ Bandingkan kota",cmpPanel(),"Matahari dan bulan");
+    headBtn();atmo();applyDash();rxSync();notifyAlerts();
+  }catch(e){console.error("Ren Weather+",e)}
+}
+const _render=render;
+render=function(){_render.apply(this,arguments);enhance()};
+
+/* privasi: batasi panjang data log yang dikirim ke Firebase */
+const _log=addAdminLog;
+addAdminLog=function(t,d){
+  try{const c={};Object.keys(d||{}).forEach(k=>{c[k]=typeof d[k]==="string"?d[k].slice(0,80):d[k]});return _log(t,c)}catch(e){return _log(t,d)}
+};
+})();
+</script>
+
+</body>
+</html>
